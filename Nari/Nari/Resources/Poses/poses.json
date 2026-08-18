@@ -1,0 +1,65 @@
+{
+  "poses": [
+    {
+      "id": "agem",
+      "names": { "id": "Agem", "en": "Agem" },
+      "instructions": {
+        "id": "Rentangkan kedua tangan lurus sejajar bahu, lutut sedikit mendak.",
+        "en": "Stretch both arms level with the shoulders, knees slightly bent."
+      },
+      "holdSeconds": 3.0,
+      "artworkName": "PoseAgem",
+      "targets": [
+        { "point": "head",       "x":  0.00, "y": -1.35, "tolerance": 0.50 },
+        { "point": "leftWrist",  "x":  0.95, "y": -1.00, "tolerance": 0.45 },
+        { "point": "rightWrist", "x": -0.95, "y": -1.00, "tolerance": 0.45 },
+        { "point": "leftKnee",   "x":  0.35, "y":  0.55, "tolerance": 0.45 },
+        { "point": "rightKnee",  "x": -0.35, "y":  0.55, "tolerance": 0.45 }
+      ],
+      "rules": [
+        {
+          "kind": "lineAngle",
+          "joints": ["rightWrist", "leftWrist"],
+          "targetDegrees": 0,
+          "toleranceDegrees": 15,
+          "affects": ["leftWrist", "rightWrist"]
+        },
+        {
+          "kind": "lineAngle",
+          "joints": ["rightShoulder", "leftShoulder"],
+          "targetDegrees": 0,
+          "toleranceDegrees": 12,
+          "affects": ["leftWrist", "rightWrist"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["leftShoulder", "leftElbow", "leftWrist"],
+          "targetDegrees": 168,
+          "toleranceDegrees": 28,
+          "affects": ["leftWrist"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["rightShoulder", "rightElbow", "rightWrist"],
+          "targetDegrees": 168,
+          "toleranceDegrees": 28,
+          "affects": ["rightWrist"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["leftHip", "leftKnee", "leftAnkle"],
+          "targetDegrees": 150,
+          "toleranceDegrees": 30,
+          "affects": ["leftKnee"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["rightHip", "rightKnee", "rightAnkle"],
+          "targetDegrees": 150,
+          "toleranceDegrees": 30,
+          "affects": ["rightKnee"]
+        }
+      ]
+    }
+  ]
+}
