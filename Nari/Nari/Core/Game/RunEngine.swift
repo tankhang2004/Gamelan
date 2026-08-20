@@ -112,7 +112,11 @@ final class RunEngine {
         timeToNextInterrupt -= delta
         guard timeToNextInterrupt <= 0 else { return }
 
-        if Double.random(in: 0..<1, using: &generator) < freezeChance {
+        // Rolled before the lockout is checked, so an early Freeze is suppressed
+        // rather than re-rolled into a squat that was never drawn.
+        let rolledFreeze = Double.random(in: 0..<1, using: &generator) < freezeChance
+
+        if rolledFreeze, elapsed >= rules.freezeLockout {
             let side = AgemSide.allCases.randomElement(using: &generator) ?? .kanan
             phase = .freezeGrace(side: side, remaining: rules.freezeGracePeriod)
             events.append(.freezeCued(side))
@@ -162,11 +166,12 @@ final class RunEngine {
 
         let left = remaining - delta
         if left <= 0 {
-            // The one failure in the game that ends the run outright.
+            // The heaviest cost in the game, but still only a cost. If it takes
+            // the meter to zero the run ends, and `checkGameOver` is what says
+            // so — every branch is judged by Taksu, this one included.
             change(energy: rules.freezeFailEnergy)
             events.append(.freezeFailed)
-            events.append(.gameOver(score: score))
-            phase = .gameOver
+            returnToNgayog()
         } else {
             phase = .freezeGrace(side: side, remaining: left)
         }
