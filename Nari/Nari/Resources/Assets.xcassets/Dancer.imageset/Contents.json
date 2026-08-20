@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "dancer.png",
       "idiom" : "universal",
       "scale" : "1x"
     },

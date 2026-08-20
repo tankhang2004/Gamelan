@@ -47,3 +47,7 @@ struct PaintedIconButton: View {
         .buttonStyle(.plain)
     }
 }
+
+#Preview {
+    PaintedIconButton(symbol: <#T##String#>, diameter: <#T##CGFloat#>, fill: <#T##Color#>, action: <#T##() -> Void#>)
+}

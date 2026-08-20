@@ -10,9 +10,22 @@
 		FEED00000000000000000004 /* Nari.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nari.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A446A3723036D1530021FC0B /* Exceptions for "Nari" folder in "Nari" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FEED00000000000000000006 /* Nari */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		FEED00000000000000000005 /* Nari */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A446A3723036D1530021FC0B /* Exceptions for "Nari" folder in "Nari" target */,
+			);
 			path = Nari;
 			sourceTree = "<group>";
 		};
@@ -221,6 +234,7 @@
 				DEVELOPMENT_TEAM = 5BVF9LF7VP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Nari/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Yuk, Nari!";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Kamera dipakai untuk membaca gerak tubuhmu saat bermain. Video tidak direkam dan tidak dikirim ke mana pun.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -252,6 +266,7 @@
 				DEVELOPMENT_TEAM = 5BVF9LF7VP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Nari/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Yuk, Nari!";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Kamera dipakai untuk membaca gerak tubuhmu saat bermain. Video tidak direkam dan tidak dikirim ke mana pun.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
