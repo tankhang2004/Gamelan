@@ -41,6 +41,14 @@ struct GameTitleView: View {
     GeometryReader { proxy in
         ZStack {
             PaintTexture()
+            Image("bg")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(
+                                        width: proxy.size.width,
+                                        height: proxy.size.height
+                                    )
+                                    .clipped()
             GameTitleView(layout: MenuLayout(size: proxy.size))
         }
     }

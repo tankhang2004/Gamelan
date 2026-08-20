@@ -16,15 +16,26 @@ struct MainMenuView: View {
 
             ZStack {
                 PaintTexture()
+                Image("bg-yellow")
+                            .resizable()
+                            .scaledToFill()
+                Image("dancer")
+                    .resizable()
+                    .scaledToFit()
+                    .offset(x:60)
+                    .frame(height: layout.dancerHeight)
+                            .opacity(viewModel.isContentVisible ? 1 : 0)
+                            .scaleEffect(
+                                viewModel.isContentVisible ? 1.5 : 0.96,
+                                anchor: .center
+                            )
+                            .animation(
+                                .spring(response: 0.7, dampingFraction: 0.85),
+                                value: viewModel.isContentVisible
+                            )
 
-                DancerView(height: layout.dancerHeight)
-                    .opacity(viewModel.isContentVisible ? 1 : 0)
-                    .scaleEffect(viewModel.isContentVisible ? 1 : 0.96, anchor: .bottom)
-                    .animation(.spring(response: 0.7, dampingFraction: 0.85), value: viewModel.isContentVisible)
-
-                chrome(layout: layout)
-
-                popupLayer
+                        chrome(layout: layout)
+                        popupLayer
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
@@ -38,8 +49,7 @@ struct MainMenuView: View {
         VStack(spacing: 0) {
             HStack(alignment: .top) {
                 GameTitleView(layout: layout)
-                    .opacity(viewModel.isContentVisible ? 1 : 0)
-                    .offset(x: viewModel.isContentVisible ? 0 : -70)
+                    .offset(x: viewModel.isContentVisible ? 20 : -70, y:viewModel.isContentVisible ? 540 : 50)
                     .animation(.spring(response: 0.6, dampingFraction: 0.82), value: viewModel.isContentVisible)
 
                 Spacer(minLength: 0)
