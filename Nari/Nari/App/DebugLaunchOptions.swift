@@ -8,7 +8,7 @@ enum DebugLaunchOptions {
     }
 
     /// Starts a session on its own once the menu settles, for capturing the
-    /// curtain-opening transition: `-debugAutoStart`.
+    /// screens past the menu without tapping: `-debugAutoStart`.
     static var autoStartsSession: Bool {
         arguments.contains("-debugAutoStart")
     }

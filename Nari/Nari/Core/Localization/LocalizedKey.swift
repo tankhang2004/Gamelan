@@ -7,6 +7,7 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case menuPlay
     case menuSettings
     case menuCredits
+    case menuScores
     case tagline
 
     // Settings popup
@@ -43,6 +44,35 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case calibrationInstruction
     case calibrationSearching
     case calibrationDone
+
+    // Green room
+    case greenRoomTrack
+    case greenRoomStart
+
+    // Cues
+    case cueWalk
+    case cueSquat
+    case cueFreeze
+    case cueHold
+    case cueNgayog
+
+    // Event flashes
+    case flashNice
+    case flashMissed
+    case flashLocked
+    case flashPerfect
+    case flashBroke
+    case flashTooSlow
+
+    // Game over
+    case gameOverTitle
+    case gameOverRetry
+    case gameOverSurvived
+    case gameOverBest
+
+    // Score history
+    case scoresTitle
+    case scoresEmpty
 
     // Play
     case playHoldInstruction

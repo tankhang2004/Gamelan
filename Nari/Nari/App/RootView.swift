@@ -20,7 +20,8 @@ struct RootView: View {
                         onEnterGameplay: { router.enterGameplay($0) }
                     ),
                     settings: services.settings,
-                    credits: services.credits
+                    credits: services.credits,
+                    scores: services.scores
                 )
                 .transition(.opacity)
 
@@ -30,25 +31,26 @@ struct RootView: View {
             }
         }
         .environment(\.strings, services.settings.localizer)
-        .animation(.easeInOut(duration: 0.25), value: router.screen)
+        .animation(Theme.Motion.screenChange, value: router.screen)
         .ignoresSafeArea()
     }
 
     @ViewBuilder
     private var gameplayScreen: some View {
         if let gameplayViewModel {
-            GameplayView(viewModel: gameplayViewModel)
+            GameplayView(viewModel: gameplayViewModel, scores: services.scores)
         } else {
-            Color.black
+            Theme.Palette.ink
                 .onAppear { gameplayViewModel = makeGameplayViewModel() }
         }
     }
 
     private func makeGameplayViewModel() -> GameplayViewModel {
         GameplayViewModel(
-            pose: services.poses.pose(id: "agem") ?? .fallbackAgem,
+            poses: services.poses,
             source: services.makeBodyPoseSource(),
             audio: services.audio,
+            scores: services.scores,
             onExit: {
                 // Dropping the view model stops the camera and clears the session.
                 gameplayViewModel = nil

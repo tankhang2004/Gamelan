@@ -1,8 +1,8 @@
 import Observation
 import SwiftUI
 
-/// Drives the main menu: the curtain choreography, which popup is up, and the
-/// hand-off to the router when a session starts.
+/// Drives the main menu: the entrance, which popup is up, and the hand-off to
+/// the router when a session starts.
 @MainActor
 @Observable
 final class MainMenuViewModel {
@@ -10,11 +10,11 @@ final class MainMenuViewModel {
     enum Popup: String, Identifiable {
         case settings
         case credits
+        case scores
 
         var id: String { rawValue }
     }
 
-    private(set) var curtainPhase: CurtainPhase = .open
     private(set) var isContentVisible = false
     private(set) var isTransitioning = false
     var activePopup: Popup?
@@ -35,8 +35,6 @@ final class MainMenuViewModel {
 
     // MARK: - Lifecycle
 
-    /// Curtains start swung aside and fall shut once, then the menu fades in on
-    /// top of them.
     func onAppear() {
         guard !hasPlayedEntrance else { return }
         hasPlayedEntrance = true
@@ -45,13 +43,6 @@ final class MainMenuViewModel {
         choreography = Task { [weak self] in
             try? await Task.sleep(for: .seconds(0.15))
             guard let self, !Task.isCancelled else { return }
-
-            withAnimation(Theme.Motion.curtainClose) {
-                self.curtainPhase = .closed
-            }
-
-            try? await Task.sleep(for: .seconds(Theme.Motion.curtainCloseDuration * 0.6))
-            guard !Task.isCancelled else { return }
 
             withAnimation(Theme.Motion.contentFade) {
                 self.isContentVisible = true
@@ -62,7 +53,7 @@ final class MainMenuViewModel {
                 self.present(popup)
             }
             if DebugLaunchOptions.autoStartsSession {
-                self.select(.play)
+                self.play()
             }
             #endif
         }
@@ -70,17 +61,35 @@ final class MainMenuViewModel {
 
     // MARK: - Input
 
+    func play() {
+        guard !isTransitioning else { return }
+        audio.play(.buttonTap)
+        isTransitioning = true
+        activePopup = nil
+
+        choreography?.cancel()
+        choreography = Task { [weak self] in
+            guard let self else { return }
+
+            withAnimation(Theme.Motion.contentFade) {
+                self.isContentVisible = false
+            }
+
+            try? await Task.sleep(for: .seconds(0.3))
+            guard !Task.isCancelled else { return }
+
+            self.onEnterGameplay(.play)
+        }
+    }
+
     func select(_ item: MainMenuItem) {
         guard !isTransitioning else { return }
         audio.play(.buttonTap)
 
         switch item {
-        case .play:
-            startSession(mode: .play)
-        case .settings:
-            present(.settings)
-        case .credits:
-            present(.credits)
+        case .settings: present(.settings)
+        case .credits: present(.credits)
+        case .scores: present(.scores)
         }
     }
 
@@ -98,35 +107,6 @@ final class MainMenuViewModel {
         audio.play(.popupOpen)
         withAnimation(Theme.Motion.popup) {
             activePopup = popup
-        }
-    }
-
-    /// Fades the menu out, swings the curtains open, and only then tells the
-    /// router to put the gameplay screen on stage.
-    private func startSession(mode: GameMode) {
-        isTransitioning = true
-        activePopup = nil
-
-        choreography?.cancel()
-        choreography = Task { [weak self] in
-            guard let self else { return }
-
-            withAnimation(Theme.Motion.contentFade) {
-                self.isContentVisible = false
-            }
-
-            try? await Task.sleep(for: .seconds(0.28))
-            guard !Task.isCancelled else { return }
-
-            self.audio.play(.curtainOpen)
-            withAnimation(Theme.Motion.curtainOpen) {
-                self.curtainPhase = .open
-            }
-
-            try? await Task.sleep(for: .seconds(Theme.Motion.curtainOpenDuration))
-            guard !Task.isCancelled else { return }
-
-            self.onEnterGameplay(mode)
         }
     }
 }

@@ -1,28 +1,28 @@
 import SwiftUI
 
-/// The dots drawn over the player: green once that body point is in the right
-/// place, red while it is not, with a ring that fills as the point is held.
+/// The dots drawn over the player during a Freeze: one per tracked point.
 ///
-/// A faint dashed circle shows where the point is supposed to be, so a player
-/// who is wrong can see which way to move.
+/// Hit and unhit differ in *shape*, not only in colour — a filled disc with a
+/// tick against an open dashed ring — so a colourblind player can still read
+/// which points are in place.
 struct PoseMarkersView: View {
     let markers: [PoseEvaluation.Marker]
-    let progress: [TrackedBodyPoint: Double]
     let mapper: CameraFrameMapper
-    let showsTargets: Bool
 
-    private let radius: CGFloat = 34
+    private let radius: CGFloat = 30
 
     var body: some View {
         ZStack {
-            if showsTargets {
-                ForEach(markers) { marker in
+            ForEach(markers) { marker in
+                if !marker.isCorrect {
+                    // Where the point is supposed to go, so a player who is
+                    // wrong can see which way to move.
                     Circle()
                         .strokeBorder(
-                            Color.white.opacity(0.55),
-                            style: StrokeStyle(lineWidth: 2, dash: [6, 6])
+                            Theme.Palette.ink.opacity(0.75),
+                            style: StrokeStyle(lineWidth: 4, dash: [8, 7])
                         )
-                        .frame(width: radius * 2, height: radius * 2)
+                        .frame(width: radius * 1.6, height: radius * 1.6)
                         .position(mapper.point(marker.target))
                 }
             }
@@ -33,28 +33,29 @@ struct PoseMarkersView: View {
             }
         }
         .allowsHitTesting(false)
-        .animation(.easeOut(duration: 0.12), value: markers.map(\.isCorrect))
+        .animation(.easeOut(duration: 0.14), value: markers.map(\.isCorrect))
     }
 
+    @ViewBuilder
     private func markerView(_ marker: PoseEvaluation.Marker) -> some View {
-        let color = marker.isCorrect ? Theme.Palette.poseCorrect : Theme.Palette.poseWrong
-        let filled = progress[marker.point] ?? 0
-
-        return ZStack {
+        if marker.isCorrect {
+            ZStack {
+                Circle()
+                    .fill(Theme.Palette.poseCorrect)
+                    .frame(width: radius * 2, height: radius * 2)
+                Image(systemName: "checkmark")
+                    .font(.system(size: radius * 0.85, weight: .heavy))
+                    .foregroundStyle(Theme.Palette.cream)
+            }
+            .overlay(Circle().strokeBorder(Theme.Palette.paper, lineWidth: 4))
+            .shadow(color: Theme.Palette.ink.opacity(0.4), radius: 8, y: 3)
+            .transition(.scale(scale: 0.6).combined(with: .opacity))
+        } else {
             Circle()
-                .fill(color.opacity(0.55))
-                .frame(width: radius * 1.7, height: radius * 1.7)
-
-            Circle()
-                .stroke(Color.white.opacity(0.35), lineWidth: 3)
+                .strokeBorder(Theme.Palette.poseWrong, lineWidth: 6)
+                .background(Circle().fill(Theme.Palette.paper.opacity(0.28)))
                 .frame(width: radius * 2, height: radius * 2)
-
-            Circle()
-                .trim(from: 0, to: filled)
-                .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .frame(width: radius * 2, height: radius * 2)
+                .shadow(color: Theme.Palette.ink.opacity(0.4), radius: 8, y: 3)
         }
-        .shadow(color: .black.opacity(0.3), radius: 6)
     }
 }

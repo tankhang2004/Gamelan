@@ -1,11 +1,14 @@
 import SwiftUI
 
-/// Shared chrome for the settings and credits popups: dimmed backdrop, parchment
-/// card with a gold frame, title bar, and a close button.
+/// Shared chrome for the popups: dimmed backdrop, torn paper card, painted
+/// header bar, and a close button.
 struct PopupCard<Content: View>: View {
     let title: String
     let onClose: () -> Void
     @ViewBuilder var content: () -> Content
+
+    /// Fixed so the tear in the paper does not change shape between popups.
+    private let paperSeed: UInt64 = 41
 
     var body: some View {
         ZStack {
@@ -17,19 +20,17 @@ struct PopupCard<Content: View>: View {
             VStack(spacing: 0) {
                 header
                 content()
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 26)
+                    .padding(.horizontal, 36)
+                    .padding(.top, 22)
+                    .padding(.bottom, 34)
             }
             .frame(maxWidth: Theme.Metrics.popupMaxWidth)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Metrics.popupCornerRadius, style: .continuous)
-                    .fill(Theme.Palette.parchment)
+            .painted(
+                TornEdgeShape(seed: paperSeed, roughness: 0.018),
+                fill: Theme.Palette.paper,
+                lineWidth: 6
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Metrics.popupCornerRadius, style: .continuous)
-                    .strokeBorder(Theme.Palette.goldTrim, lineWidth: 4)
-            )
-            .shadow(color: .black.opacity(0.5), radius: 30, y: 14)
+            .shadow(color: Theme.Palette.ink.opacity(0.45), radius: 26, y: 14)
             .padding(.vertical, 40)
         }
         .transition(.opacity.combined(with: .scale(scale: 0.94)))
@@ -37,38 +38,40 @@ struct PopupCard<Content: View>: View {
 
     private var header: some View {
         ZStack {
-            LinearGradient(
-                colors: [Theme.Palette.curtainRed, Theme.Palette.curtainRedDeep],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            Theme.Palette.indigo
 
             Text(title)
-                .font(Theme.Fonts.title(28))
-                .foregroundStyle(Theme.Palette.parchment)
+                .font(Theme.Fonts.title(30))
+                .foregroundStyle(Theme.Palette.cream)
 
             HStack {
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Theme.Palette.parchment)
+                        .foregroundStyle(Theme.Palette.cream)
                         .padding(12)
-                        .background(Circle().fill(Color.black.opacity(0.22)))
+                        .background(Circle().fill(Theme.Palette.ink.opacity(0.3)))
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 16)
+                .padding(.trailing, 20)
             }
         }
-        .frame(height: 72)
-        .clipShape(
-            UnevenRoundedRectangle(
-                topLeadingRadius: Theme.Metrics.popupCornerRadius - 4,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: Theme.Metrics.popupCornerRadius - 4,
-                style: .continuous
-            )
-        )
+        .frame(height: 78)
+    }
+}
+
+/// A smaller painted pill for popup actions, so a popup does not have to reach
+/// for the full-size menu button.
+struct PopupActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Theme.Fonts.label(20))
+            .foregroundStyle(Theme.Palette.cream)
+            .padding(.horizontal, 34)
+            .padding(.vertical, 13)
+            .background(Capsule().fill(Theme.Palette.indigo.opacity(configuration.isPressed ? 0.8 : 1)))
+            .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: 3))
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
     }
 }

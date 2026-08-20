@@ -8,17 +8,20 @@ final class AppServices {
     let settings: SettingsService
     let credits: CreditsProviding
     let poses: PoseProviding
+    let scores: ScoreHistoryStoring
 
     init(
         store: SettingsStoring = UserDefaultsSettingsStore(),
         audio: AudioServicing = SilentAudioService(),
         credits: CreditsProviding = StaticCreditsRepository(),
-        poses: PoseProviding = PoseRepository()
+        poses: PoseProviding = PoseRepository(),
+        scores: ScoreHistoryStoring = UserDefaultsScoreHistoryStore()
     ) {
         self.audio = audio
         self.settings = SettingsService(store: store, audio: audio)
         self.credits = credits
         self.poses = poses
+        self.scores = scores
     }
 
     /// A fresh pose source per session, so a cancelled session never leaves the
@@ -33,6 +36,6 @@ final class AppServices {
 
     /// Throwaway graph for SwiftUI previews: nothing is persisted.
     static func preview() -> AppServices {
-        AppServices(store: InMemorySettingsStore())
+        AppServices(store: InMemorySettingsStore(), scores: InMemoryScoreHistoryStore())
     }
 }

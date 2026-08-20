@@ -1,62 +1,117 @@
 {
   "poses": [
     {
-      "id": "agem",
-      "names": { "id": "Agem", "en": "Agem" },
+      "id": "agem-kanan",
+      "names": { "id": "Agem Kanan", "en": "Agem Kanan" },
       "instructions": {
-        "id": "Rentangkan kedua tangan lurus sejajar bahu, lutut sedikit mendak.",
-        "en": "Stretch both arms level with the shoulders, knees slightly bent."
+        "id": "Berat badan ke kanan, tangan kanan setinggi bahu, tangan kiri di depan dada, lutut mendak.",
+        "en": "Weight on the right, right arm level with the shoulder, left hand at chest height, knees bent."
       },
-      "holdSeconds": 3.0,
-      "artworkName": "PoseAgem",
+      "holdSeconds": 7.0,
+      "artworkName": "PoseAgemKanan",
       "targets": [
-        { "point": "head",       "x":  0.00, "y": -1.35, "tolerance": 0.50 },
-        { "point": "leftWrist",  "x":  0.95, "y": -1.00, "tolerance": 0.45 },
-        { "point": "rightWrist", "x": -0.95, "y": -1.00, "tolerance": 0.45 },
-        { "point": "leftKnee",   "x":  0.35, "y":  0.55, "tolerance": 0.45 },
-        { "point": "rightKnee",  "x": -0.35, "y":  0.55, "tolerance": 0.45 }
+        { "point": "neck",       "x":  0.05, "y": -0.95, "tolerance": 0.40 },
+        { "point": "rightWrist", "x": -1.05, "y": -0.95, "tolerance": 0.50 },
+        { "point": "rightElbow", "x": -0.60, "y": -0.90, "tolerance": 0.45 },
+        { "point": "leftWrist",  "x":  0.35, "y": -0.70, "tolerance": 0.50 },
+        { "point": "leftElbow",  "x":  0.45, "y": -0.30, "tolerance": 0.45 },
+        { "point": "rightKnee",  "x": -0.45, "y":  0.60, "tolerance": 0.45 },
+        { "point": "leftKnee",   "x":  0.40, "y":  0.60, "tolerance": 0.45 },
+        { "point": "rightAnkle", "x": -0.40, "y":  1.35, "tolerance": 0.50 },
+        { "point": "leftAnkle",  "x":  0.45, "y":  1.35, "tolerance": 0.50 }
       ],
       "rules": [
         {
           "kind": "lineAngle",
-          "joints": ["rightWrist", "leftWrist"],
-          "targetDegrees": 0,
-          "toleranceDegrees": 15,
-          "affects": ["leftWrist", "rightWrist"]
-        },
-        {
-          "kind": "lineAngle",
           "joints": ["rightShoulder", "leftShoulder"],
           "targetDegrees": 0,
-          "toleranceDegrees": 12,
-          "affects": ["leftWrist", "rightWrist"]
-        },
-        {
-          "kind": "jointAngle",
-          "joints": ["leftShoulder", "leftElbow", "leftWrist"],
-          "targetDegrees": 168,
-          "toleranceDegrees": 28,
-          "affects": ["leftWrist"]
+          "toleranceDegrees": 18,
+          "affects": ["neck"]
         },
         {
           "kind": "jointAngle",
           "joints": ["rightShoulder", "rightElbow", "rightWrist"],
-          "targetDegrees": 168,
-          "toleranceDegrees": 28,
-          "affects": ["rightWrist"]
+          "targetDegrees": 165,
+          "toleranceDegrees": 30,
+          "affects": ["rightWrist", "rightElbow"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["leftShoulder", "leftElbow", "leftWrist"],
+          "targetDegrees": 95,
+          "toleranceDegrees": 35,
+          "affects": ["leftWrist", "leftElbow"]
         },
         {
           "kind": "jointAngle",
           "joints": ["leftHip", "leftKnee", "leftAnkle"],
-          "targetDegrees": 150,
-          "toleranceDegrees": 30,
+          "targetDegrees": 145,
+          "toleranceDegrees": 32,
           "affects": ["leftKnee"]
         },
         {
           "kind": "jointAngle",
           "joints": ["rightHip", "rightKnee", "rightAnkle"],
-          "targetDegrees": 150,
+          "targetDegrees": 145,
+          "toleranceDegrees": 32,
+          "affects": ["rightKnee"]
+        }
+      ]
+    },
+    {
+      "id": "agem-kiri",
+      "names": { "id": "Agem Kiri", "en": "Agem Kiri" },
+      "instructions": {
+        "id": "Berat badan ke kiri, tangan kiri setinggi bahu, tangan kanan di depan dada, lutut mendak.",
+        "en": "Weight on the left, left arm level with the shoulder, right hand at chest height, knees bent."
+      },
+      "holdSeconds": 7.0,
+      "artworkName": "PoseAgemKiri",
+      "targets": [
+        { "point": "neck",       "x": -0.05, "y": -0.95, "tolerance": 0.40 },
+        { "point": "leftWrist",  "x":  1.05, "y": -0.95, "tolerance": 0.50 },
+        { "point": "leftElbow",  "x":  0.60, "y": -0.90, "tolerance": 0.45 },
+        { "point": "rightWrist", "x": -0.35, "y": -0.70, "tolerance": 0.50 },
+        { "point": "rightElbow", "x": -0.45, "y": -0.30, "tolerance": 0.45 },
+        { "point": "leftKnee",   "x":  0.45, "y":  0.60, "tolerance": 0.45 },
+        { "point": "rightKnee",  "x": -0.40, "y":  0.60, "tolerance": 0.45 },
+        { "point": "leftAnkle",  "x":  0.40, "y":  1.35, "tolerance": 0.50 },
+        { "point": "rightAnkle", "x": -0.45, "y":  1.35, "tolerance": 0.50 }
+      ],
+      "rules": [
+        {
+          "kind": "lineAngle",
+          "joints": ["rightShoulder", "leftShoulder"],
+          "targetDegrees": 0,
+          "toleranceDegrees": 18,
+          "affects": ["neck"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["leftShoulder", "leftElbow", "leftWrist"],
+          "targetDegrees": 165,
           "toleranceDegrees": 30,
+          "affects": ["leftWrist", "leftElbow"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["rightShoulder", "rightElbow", "rightWrist"],
+          "targetDegrees": 95,
+          "toleranceDegrees": 35,
+          "affects": ["rightWrist", "rightElbow"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["leftHip", "leftKnee", "leftAnkle"],
+          "targetDegrees": 145,
+          "toleranceDegrees": 32,
+          "affects": ["leftKnee"]
+        },
+        {
+          "kind": "jointAngle",
+          "joints": ["rightHip", "rightKnee", "rightAnkle"],
+          "targetDegrees": 145,
+          "toleranceDegrees": 32,
           "affects": ["rightKnee"]
         }
       ]

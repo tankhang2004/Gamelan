@@ -57,7 +57,7 @@ private struct Sketch {
     let size: CGSize
 
     private let ink = Theme.Palette.pencil
-    private let accent = Theme.Palette.curtainRed
+    private let accent = Theme.Palette.cueOrange
 
     private func point(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
         CGPoint(x: x * size.width, y: y * size.height)

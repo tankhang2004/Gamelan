@@ -4,9 +4,13 @@ import Foundation
 import Observation
 import OSLog
 
-/// Runs a play session: the placement tutorial, the calibration hold, and the
-/// pose loop. It owns the pose source and is the only place that decides which
-/// phase the screen is in.
+/// Runs a play session end to end: the placement tutorial, the calibration hold,
+/// the countdown, and then the scored loop.
+///
+/// This is the one state machine the design asks for. The loop's own rules live
+/// in `RunEngine` and the body reading lives in `MotionTracker`; this type owns
+/// the phase, wires those two together frame by frame, and turns what came back
+/// into sound and screen state.
 @MainActor
 @Observable
 final class GameplayViewModel {
@@ -18,8 +22,11 @@ final class GameplayViewModel {
         case preparing
         /// Waiting for the whole body to stay in frame long enough.
         case calibrating
+        /// The green room: track name and a countdown into the run.
+        case starting(remaining: Double)
         case playing
         case paused
+        case gameOver
         case unavailable(Problem)
 
         enum Problem: Equatable {
@@ -28,51 +35,54 @@ final class GameplayViewModel {
         }
     }
 
-    /// How long the whole body has to stay in frame before play starts.
+    /// How long the whole body has to stay in frame before the countdown starts.
     static let calibrationSeconds: Double = 3
+    /// The green room countdown.
+    static let countdownSeconds: Double = 3
     /// Losing the body for this long during play sends the player back to
     /// calibration rather than leaving the markers frozen on screen.
     private static let bodyLostGraceSeconds: Double = 2
 
     private(set) var phase: Phase = .tutorial
     private(set) var calibrationProgress: Double = 0
-    private(set) var holdProgress: Double = 0
-    private(set) var markers: [PoseEvaluation.Marker] = []
-    private(set) var markerProgress: [TrackedBodyPoint: Double] = [:]
     private(set) var isBodyVisible = false
-    private(set) var completedReps = 0
-    private(set) var isCelebrating = false
-
-    /// Size of the frames Vision is reading, needed to place markers over the
-    /// aspect-filled preview.
     private(set) var imageSize: CGSize = .zero
 
-    let pose: PoseDefinition
+    /// The loop. Rebuilt on retry so a new run starts from a clean Taksu meter.
+    private(set) var run = RunEngine()
+    private(set) var tracker = MotionTracker()
 
+    /// The most recent event worth flashing on screen, and when it landed. The
+    /// view fades it out on its own rather than the model running a timer.
+    private(set) var lastEvent: RunEvent?
+    private(set) var lastEventAt: Date = .distantPast
+
+    @ObservationIgnored private let poses: PoseProviding
     @ObservationIgnored private let source: BodyPoseSource
     @ObservationIgnored private let audio: AudioServicing
+    @ObservationIgnored private let scores: ScoreHistoryStoring
     @ObservationIgnored private let onExit: () -> Void
     @ObservationIgnored private var consumer: Task<Void, Never>?
-    @ObservationIgnored private var celebration: Task<Void, Never>?
     @ObservationIgnored private var lastTimestamp: TimeInterval?
     @ObservationIgnored private var bodyLostSeconds: Double = 0
     @ObservationIgnored private var lastPoseLog: TimeInterval = 0
 
     init(
-        pose: PoseDefinition,
+        poses: PoseProviding,
         source: BodyPoseSource,
         audio: AudioServicing,
+        scores: ScoreHistoryStoring,
         onExit: @escaping () -> Void
     ) {
-        self.pose = pose
+        self.poses = poses
         self.source = source
         self.audio = audio
+        self.scores = scores
         self.onExit = onExit
     }
 
     deinit {
         consumer?.cancel()
-        celebration?.cancel()
         source.stop()
     }
 
@@ -86,7 +96,12 @@ final class GameplayViewModel {
     /// would show them; marker positions have to be flipped to match.
     var isPreviewMirrored: Bool { true }
 
-    var titleKey: LocalizedKey { .gameplayPlayTitle }
+    /// The pose the Freeze cue is asking for, and the card the HUD shows.
+    var cuedPose: PoseDefinition? {
+        run.phase.cuedSide.map { poses.pose(for: $0) }
+    }
+
+    var clockText: String { RunClock.text(for: run.elapsed) }
 
     // MARK: - Session control
 
@@ -121,9 +136,17 @@ final class GameplayViewModel {
         beginCalibration()
     }
 
+    /// Starts a whole new run from the game over screen.
+    func retry() {
+        audio.play(.buttonTap)
+        run = RunEngine()
+        tracker.reset()
+        lastEvent = nil
+        beginCalibration()
+    }
+
     func exit() {
         consumer?.cancel()
-        celebration?.cancel()
         source.stop()
         onExit()
     }
@@ -133,11 +156,9 @@ final class GameplayViewModel {
     private func beginCalibration() {
         phase = .calibrating
         calibrationProgress = 0
-        holdProgress = 0
-        markerProgress = [:]
-        markers = []
         bodyLostSeconds = 0
         lastTimestamp = nil
+        tracker.reset()
     }
 
     private func consume() {
@@ -158,9 +179,11 @@ final class GameplayViewModel {
         switch phase {
         case .calibrating:
             advanceCalibration(snapshot, delta: delta)
+        case .starting(let remaining):
+            advanceCountdown(remaining: remaining, delta: delta)
         case .playing:
             advancePlay(snapshot, delta: delta)
-        case .tutorial, .preparing, .paused, .unavailable:
+        case .tutorial, .preparing, .paused, .gameOver, .unavailable:
             break
         }
 
@@ -170,7 +193,8 @@ final class GameplayViewModel {
     private func timeSinceLastFrame(_ timestamp: TimeInterval) -> Double {
         defer { lastTimestamp = timestamp }
         guard let last = lastTimestamp else { return 0 }
-        // Clamp so a stall between frames cannot jump a progress bar to full.
+        // Clamp so a stall between frames cannot jump a progress bar to full or
+        // burn a whole cue window in one tick.
         return min(max(timestamp - last, 0), 0.2)
     }
 
@@ -185,56 +209,62 @@ final class GameplayViewModel {
             calibrationProgress = max(0, calibrationProgress - delta / Self.calibrationSeconds * 0.5)
         }
 
-        if calibrationProgress >= 1 {
-            audio.play(.calibrationComplete)
+        guard calibrationProgress >= 1 else { return }
+        audio.play(.calibrationComplete)
+        phase = .starting(remaining: Self.countdownSeconds)
+    }
+
+    private func advanceCountdown(remaining: Double, delta: Double) {
+        let left = remaining - delta
+        if left <= 0 {
             phase = .playing
-            holdProgress = 0
             bodyLostSeconds = 0
+        } else {
+            phase = .starting(remaining: left)
         }
     }
 
     private func advancePlay(_ snapshot: BodyPoseSnapshot, delta: Double) {
-        let evaluation = PoseEvaluator.evaluate(snapshot: snapshot, definition: pose)
-        markers = evaluation.markers
-
-        guard evaluation.hasAllPoints else {
+        // Stepping out of shot cannot be scored either way, so the run is
+        // suspended back to calibration rather than quietly draining Taksu.
+        guard isBodyVisible else {
             bodyLostSeconds += delta
-            if bodyLostSeconds >= Self.bodyLostGraceSeconds {
-                beginCalibration()
-            }
+            if bodyLostSeconds >= Self.bodyLostGraceSeconds { beginCalibration() }
             return
         }
         bodyLostSeconds = 0
 
-        let step = delta / pose.holdSeconds
-        for marker in evaluation.markers {
-            let current = markerProgress[marker.point] ?? 0
-            markerProgress[marker.point] = marker.isCorrect
-                ? min(1, current + step)
-                : max(0, current - step * 2)
-        }
-
-        if evaluation.isCorrect {
-            holdProgress = min(1, holdProgress + step)
-            if holdProgress >= 1 { completeRep() }
-        } else {
-            holdProgress = max(0, holdProgress - step)
+        let input = tracker.read(snapshot, delta: delta, cuedPose: cuedPose)
+        for event in run.advance(delta: delta, input: input) {
+            react(to: event)
         }
     }
 
-    private func completeRep() {
-        completedReps += 1
-        holdProgress = 0
-        markerProgress = [:]
-        audio.play(.poseComplete)
+    // MARK: - Reacting to the loop
 
-        celebration?.cancel()
-        isCelebrating = true
-        celebration = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1.4))
-            guard let self, !Task.isCancelled else { return }
-            self.isCelebrating = false
+    private func react(to event: RunEvent) {
+        switch event {
+        case .ngayogCycle: audio.play(.ngayogCycle)
+        case .squatCued: audio.play(.squatCue)
+        case .squatHit: audio.play(.squatHit)
+        case .squatMissed: audio.play(.squatMiss)
+        case .freezeCued: audio.play(.freezeCue)
+        case .freezeLocked: audio.play(.freezeLocked)
+        case .freezeHeldFully: audio.play(.freezeHeld)
+        case .freezeBrokenEarly: audio.play(.freezeBroken)
+        case .freezeFailed: audio.play(.freezeFailed)
+        case .energyLow: audio.play(.energyLow)
+        case .gameOver(let score):
+            audio.play(.gameOver)
+            scores.record(ScoreRecord(score: score, survivedSeconds: run.elapsed))
+            phase = .gameOver
         }
+
+        // A ngayog tick fires constantly and would drown out everything else on
+        // screen, so it is heard but never flashed.
+        guard event != .ngayogCycle else { return }
+        lastEvent = event
+        lastEventAt = .now
     }
 
     /// Prints the current body in pose-definition coordinates once a second, so

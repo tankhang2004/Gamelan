@@ -1,22 +1,28 @@
 import SwiftUI
 
-/// The main menu stage: backdrop, curtains, dancer, logo, menu plaques, popups.
+/// The main menu: painted ground, logo on the left, dancer in the middle, the
+/// three round buttons in one corner and START in the other.
 struct MainMenuView: View {
     @State var viewModel: MainMenuViewModel
     let settings: SettingsService
     let credits: CreditsProviding
+    let scores: ScoreHistoryStoring
+
+    @Environment(\.strings) private var strings
 
     var body: some View {
         GeometryReader { proxy in
             let layout = MenuLayout(size: proxy.size)
 
             ZStack {
-                StageBackdropView()
+                PaintTexture()
 
-                CurtainView(phase: viewModel.curtainPhase, valanceHeight: layout.valanceHeight)
+                DancerView(height: layout.dancerHeight)
+                    .opacity(viewModel.isContentVisible ? 1 : 0)
+                    .scaleEffect(viewModel.isContentVisible ? 1 : 0.96, anchor: .bottom)
+                    .animation(.spring(response: 0.7, dampingFraction: 0.85), value: viewModel.isContentVisible)
 
-                content(layout: layout, in: proxy.size)
-                    .padding(.top, layout.valanceHeight * 0.55)
+                chrome(layout: layout)
 
                 popupLayer
             }
@@ -26,33 +32,56 @@ struct MainMenuView: View {
         .task { viewModel.onAppear() }
     }
 
-    // MARK: - Stage content
+    // MARK: - Chrome
 
-    private func content(layout: MenuLayout, in size: CGSize) -> some View {
-        ZStack {
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-                DancerView(height: layout.dancerHeight)
-            }
-            .padding(.bottom, size.height * 0.06)
-            .opacity(viewModel.isContentVisible ? 1 : 0)
-            .scaleEffect(viewModel.isContentVisible ? 1 : 0.94, anchor: .bottom)
-
-            HStack(alignment: .center, spacing: 24) {
+    private func chrome(layout: MenuLayout) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top) {
                 GameTitleView(layout: layout)
                     .opacity(viewModel.isContentVisible ? 1 : 0)
-                    .offset(x: viewModel.isContentVisible ? 0 : -60)
+                    .offset(x: viewModel.isContentVisible ? 0 : -70)
                     .animation(.spring(response: 0.6, dampingFraction: 0.82), value: viewModel.isContentVisible)
 
                 Spacer(minLength: 0)
 
-                MenuButtonStack(layout: layout, isVisible: viewModel.isContentVisible) { item in
+                iconRow(layout: layout)
+            }
+
+            Spacer(minLength: 0)
+
+            HStack {
+                Spacer(minLength: 0)
+                Button(strings[.menuPlay]) { viewModel.play() }
+                    .buttonStyle(
+                        PaintedButtonStyle(
+                            height: layout.playButtonHeight,
+                            fontSize: layout.scaled(46)
+                        )
+                    )
+                    .opacity(viewModel.isContentVisible ? 1 : 0)
+                    .offset(y: viewModel.isContentVisible ? 0 : 50)
+                    .animation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.12), value: viewModel.isContentVisible)
+            }
+        }
+        .padding(.horizontal, layout.horizontalPadding)
+        .padding(.vertical, layout.verticalPadding)
+    }
+
+    private func iconRow(layout: MenuLayout) -> some View {
+        HStack(spacing: layout.iconSpacing) {
+            ForEach(Array(MainMenuItem.allCases.enumerated()), id: \.element.id) { index, item in
+                PaintedIconButton(symbol: item.symbolName, diameter: layout.iconDiameter) {
                     viewModel.select(item)
                 }
+                .accessibilityLabel(strings[item.titleKey])
+                .opacity(viewModel.isContentVisible ? 1 : 0)
+                .offset(y: viewModel.isContentVisible ? 0 : -40)
+                .animation(
+                    .spring(response: 0.5, dampingFraction: 0.78).delay(Double(index) * 0.06),
+                    value: viewModel.isContentVisible
+                )
             }
-            .padding(.horizontal, layout.horizontalPadding)
         }
-        .animation(Theme.Motion.contentFade, value: viewModel.isContentVisible)
     }
 
     // MARK: - Popups
@@ -74,6 +103,10 @@ struct MainMenuView: View {
             )
             .zIndex(1)
 
+        case .scores:
+            ScoreHistoryPopupView(records: scores.records, onClose: { viewModel.dismissPopup() })
+                .zIndex(1)
+
         case nil:
             EmptyView()
         }
@@ -85,7 +118,8 @@ struct MainMenuView: View {
     return MainMenuView(
         viewModel: MainMenuViewModel(audio: services.audio, onEnterGameplay: { _ in }),
         settings: services.settings,
-        credits: services.credits
+        credits: services.credits,
+        scores: services.scores
     )
     .environment(\.strings, services.settings.localizer)
 }

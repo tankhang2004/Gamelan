@@ -16,20 +16,17 @@ struct TutorialView: View {
 
     var body: some View {
         ZStack {
-            StageBackdropView()
+            PaintTexture()
 
             VStack(spacing: 18) {
                 Text(strings[.tutorialTitle])
                     .font(Theme.Fonts.title(34))
-                    .foregroundStyle(Theme.Palette.curtainGold)
+                    .foregroundStyle(Theme.Palette.indigo)
 
                 page
 
                 Button(strings[.tutorialStart], action: onStart)
-                    .buttonStyle(PlaqueButtonStyle(emphasis: .primary, height: 84))
-                    .frame(width: 280)
-                    .font(Theme.Fonts.label(30))
-                    .foregroundStyle(Theme.Palette.ink)
+                    .buttonStyle(PaintedButtonStyle(height: 84, fontSize: 34))
             }
             .padding(.vertical, 26)
 
@@ -38,9 +35,10 @@ struct TutorialView: View {
                     Button(action: onBack) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(Theme.Palette.parchment)
+                            .foregroundStyle(Theme.Palette.cream)
                             .padding(16)
-                            .background(Circle().fill(Color.black.opacity(0.35)))
+                            .background(Circle().fill(Theme.Palette.indigo))
+                            .overlay(Circle().strokeBorder(Theme.Palette.ink, lineWidth: 4))
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -95,7 +93,7 @@ struct TutorialView: View {
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Theme.Palette.paper)
-                .shadow(color: .black.opacity(0.5), radius: 22, y: 10)
+                .shadow(color: Theme.Palette.ink.opacity(0.45), radius: 22, y: 10)
         )
         .overlay(tapeStrips)
         .rotationEffect(.degrees(-0.7))
@@ -123,7 +121,7 @@ struct TutorialView: View {
 
     private var tape: some View {
         Rectangle()
-            .fill(Theme.Palette.curtainGold.opacity(0.45))
+            .fill(Theme.Palette.ochre.opacity(0.55))
             .frame(width: 84, height: 26)
             .overlay(Rectangle().strokeBorder(Color.white.opacity(0.35), lineWidth: 1))
     }

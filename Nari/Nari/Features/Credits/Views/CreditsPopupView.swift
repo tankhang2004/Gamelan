@@ -44,7 +44,7 @@ struct CreditsPopupView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(section.title)
                 .font(Theme.Fonts.label(20))
-                .foregroundStyle(Theme.Palette.curtainRedDeep)
+                .foregroundStyle(Theme.Palette.indigoDeep)
 
             ForEach(Array(section.lines.enumerated()), id: \.offset) { _, line in
                 Text(line)
@@ -55,7 +55,7 @@ struct CreditsPopupView: View {
             }
 
             Rectangle()
-                .fill(Theme.Palette.goldTrim.opacity(0.6))
+                .fill(Theme.Palette.ink.opacity(0.22))
                 .frame(height: 1)
                 .padding(.top, 6)
         }
@@ -65,7 +65,7 @@ struct CreditsPopupView: View {
 #Preview {
     let services = AppServices.preview()
     return ZStack {
-        StageBackdropView()
+        PaintTexture()
         CreditsPopupView(
             viewModel: CreditsViewModel(repository: services.credits, settings: services.settings),
             onClose: {}
