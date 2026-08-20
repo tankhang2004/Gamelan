@@ -23,10 +23,35 @@ struct Localizer: Equatable, Sendable {
     }
 
     private static let indonesian: [LocalizedKey: String] = [
-        .menuPlay: "MAIN",
+        .menuPlay: "MULAI",
         .menuSettings: "PENGATURAN",
-        .menuCredits: "KREDIT",
+        .menuCredits: "INFO",
+        .menuScores: "SKOR",
         .tagline: "Latihan tubuh untuk penari Bali cilik",
+
+        .greenRoomTrack: "Gamelan — Tabuh Pertama",
+        .greenRoomStart: "SIAP!",
+
+        .cueWalk: "NGAYOG",
+        .cueSquat: "NGE'ED!",
+        .cueFreeze: "DIAM!",
+        .cueHold: "TAHAN",
+        .cueNgayog: "Ngayog",
+
+        .flashNice: "MANTAP!",
+        .flashMissed: "LEWAT",
+        .flashLocked: "DAPAT!",
+        .flashPerfect: "SEMPURNA!",
+        .flashBroke: "GOYAH",
+        .flashTooSlow: "KELAMAAN",
+
+        .gameOverTitle: "Selesai",
+        .gameOverRetry: "MAIN LAGI",
+        .gameOverSurvived: "Bertahan",
+        .gameOverBest: "Rekor baru!",
+
+        .scoresTitle: "Riwayat Skor",
+        .scoresEmpty: "Belum ada permainan.\nMain dulu, yuk!",
 
         .settingsTitle: "Pengaturan",
         .settingsMusicVolume: "Volume Musik",
@@ -85,10 +110,35 @@ struct Localizer: Equatable, Sendable {
     ]
 
     private static let english: [LocalizedKey: String] = [
-        .menuPlay: "PLAY",
+        .menuPlay: "START",
         .menuSettings: "SETTINGS",
-        .menuCredits: "CREDITS",
+        .menuCredits: "INFO",
+        .menuScores: "SCORES",
         .tagline: "Body training for young Balinese dancers",
+
+        .greenRoomTrack: "Gamelan — First Tabuh",
+        .greenRoomStart: "GAME START",
+
+        .cueWalk: "WALK",
+        .cueSquat: "SQUAT!",
+        .cueFreeze: "FREEZE!",
+        .cueHold: "HOLD",
+        .cueNgayog: "Ngayog",
+
+        .flashNice: "NICE!",
+        .flashMissed: "MISSED",
+        .flashLocked: "LOCKED!",
+        .flashPerfect: "PERFECT!",
+        .flashBroke: "WOBBLE",
+        .flashTooSlow: "TOO SLOW",
+
+        .gameOverTitle: "Game Over",
+        .gameOverRetry: "PLAY AGAIN",
+        .gameOverSurvived: "Survived",
+        .gameOverBest: "New best!",
+
+        .scoresTitle: "Score History",
+        .scoresEmpty: "No runs yet.\nGo dance one!",
 
         .settingsTitle: "Settings",
         .settingsMusicVolume: "Music Volume",

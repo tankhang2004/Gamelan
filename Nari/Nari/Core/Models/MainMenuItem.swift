@@ -1,37 +1,28 @@
 import Foundation
 
-/// The entries in the menu column, in display order.
+/// The three round buttons in the top corner of the menu, in display order.
+/// PLAY is not one of them — it is the painted pill in the opposite corner.
 enum MainMenuItem: String, CaseIterable, Identifiable, Sendable {
-    case play
     case settings
     case credits
+    case scores
 
     var id: String { rawValue }
 
     var titleKey: LocalizedKey {
         switch self {
-        case .play: .menuPlay
         case .settings: .menuSettings
         case .credits: .menuCredits
+        case .scores: .menuScores
         }
     }
 
-    /// `play` is the hero action and is rendered larger than the rest.
-    var emphasis: Emphasis {
-        self == .play ? .primary : .secondary
-    }
-
-    /// SF Symbol shown next to the label until custom icon art arrives.
+    /// SF Symbol shown in the button, matching the Figma icons.
     var symbolName: String {
         switch self {
-        case .play: "play.fill"
-        case .settings: "slider.horizontal.3"
-        case .credits: "heart.text.square"
+        case .settings: "gearshape"
+        case .credits: "info.circle"
+        case .scores: "clock"
         }
-    }
-
-    enum Emphasis: Sendable {
-        case primary
-        case secondary
     }
 }

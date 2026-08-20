@@ -1,14 +1,11 @@
 # Yuk, Nari!
 
-A motion-tracking game for young Balinese dancers, built to complement studio
-practice with body-awareness and strength exercises drawn from the basic
-postures — agem, mendak, ngegol.
+A motion-tracking game for young Balinese dancers. The player walks in a steady
+head-tilt rhythm (ngayog) and is interrupted at random to squat (nge'ed) or to
+freeze into a held agem, all scored against a Taksu meter that ends the run when
+it empties.
 
 iPad only, landscape only. Deployment target iOS 17.
-
-This repository contains the main menu and the first playable pose loop: a
-placement tutorial, a camera calibration hold, and agem detection with Vision's
-human body pose request.
 
 ## Running
 
@@ -35,126 +32,174 @@ Nari/
     RootView.swift         Hosts the current screen, injects the string table
     DebugLaunchOptions     DEBUG-only launch arguments for screenshots
   Core/
-    Models/                GameSettings, AppLanguage, MainMenuItem, GameMode,
-                           CurtainPhase, CreditSection
+    Game/                  The loop: RunRules, RunPhase, RunEngine, ScoreHistory
+    Models/                GameSettings, AppLanguage, MainMenuItem, GameMode
     Services/              SettingsStore, SettingsService, AudioService,
-                           CreditsRepository, PoseRepository
+                           CreditsRepository
     Localization/          LocalizedKey, Localizer, environment plumbing
-    Vision/                Camera capture and Vision body pose detection
+    Vision/                Camera capture, body pose detection, and the
+                           ngayog / nge'ed detectors
     Poses/                 Pose definitions and the scoring rules
   DesignSystem/
     Theme.swift            Palette, metrics, motion timings, type styles
-    Components/            PlaqueButtonStyle, PopupCard
+    Components/            PaintedShapes, PaintedButtonStyle, PopupCard
   Features/
     MainMenu/              MainMenuViewModel + stage views
     Settings/              SettingsViewModel + popup
     Credits/               CreditsViewModel + popup
-    Gameplay/              GameplayViewModel + empty screen
+    ScoreHistory/          Past runs, personal best highlighted
+    Gameplay/              GameplayViewModel + the HUD
   Resources/
     Assets.xcassets
+    Poses/poses.json
 ```
 
-### Menu flow
+## The core loop
 
-`MainMenuViewModel` runs the whole choreography:
-
-1. On appear the curtains start swung aside and fall shut, then the logo,
-   dancer, and plaques fade in.
-2. Tapping PLAY fades the menu out, swings the curtains open, and only then
-   asks `AppRouter` to put `GameplayView` on stage. The gameplay screen uses
-   the same `StageBackdropView` as the menu, so the swap is invisible.
-3. SETTINGS and CREDITS open popups over the menu; the curtains stay shut.
-
-### Play session
-
-`GameplayViewModel` owns one phase machine:
+`RunEngine` owns the whole loop and knows nothing about cameras or views. It is
+advanced one frame at a time with a `RunInput` — three booleans describing what
+the body just did — and returns the list of `RunEvent`s that resulted.
 
 | Phase | What happens |
 |---|---|
-| `tutorial` | Sketchbook page, one drawing per second, explaining where to put the iPad and where to stand. START moves on. |
+| `ngayog` | The default. Each full left-right head tilt banks +5 points and +2% Taksu. One shared timer counts down to the next interrupt. |
+| `squatCue` | 2 seconds to squat. Hit: +5 points, +5% Taksu. Miss: −8% Taksu. |
+| `freezeGrace` | 3 seconds to get all nine points into the cued agem. Failing ends the run outright. |
+| `freezeHold` | 7 seconds of holding. +3% Taksu per second, and points drip at 20 × Taksu% per second, so a full meter pays more. Breaking early stops the drip with no penalty. |
+| `gameOver` | Taksu hit 0, or a Freeze was never matched in time. |
+
+Squat and Freeze share **one** timer rather than having one each, which is what
+makes "the two cues can never fire together" a property of the design instead of
+a check somewhere in the code. Every 45 seconds survived, that timer's interval
+shrinks by 10% (floor 2–5s) and the odds of it picking Freeze rise by 5 points
+(cap 40%).
+
+Every number above lives in `RunRules` and nothing else hard-codes one.
+
+### Two notes on the design document
+
+- The GDD gives the squat window as 1 second in the core loop section and 2
+  seconds in the mechanics table. `RunRules.squatWindow` uses **2**, on the
+  grounds that a 1-second reaction to an unannounced cue is close to impossible
+  for the age group this is for. Change it in one place if that call is wrong.
+- A Freeze that is never matched ends the run immediately, whatever the Taksu
+  meter says. Because the first interrupt can fire as early as 4 seconds in, a
+  run can be over in about 8 seconds through no fault the player could have
+  avoided. That is what the GDD asks for, but it is worth playtesting before it
+  is treated as settled.
+
+## Play session
+
+`GameplayViewModel` owns one phase machine spanning the whole session:
+
+| Phase | What happens |
+|---|---|
+| `tutorial` | Sketchbook page explaining where to put the iPad and where to stand. |
 | `preparing` | Camera permission and capture session start up. |
-| `calibrating` | The whole body has to stay inside the frame for 3 seconds. The green bar around the screen fills while it does and drains when the player steps out. |
-| `playing` | Five markers track the player. Holding the pose for `holdSeconds` counts as one rep. |
-| `paused` | Resume goes back through calibration so the player has time to get set again. |
+| `calibrating` | The whole body has to stay inside the frame for 3 seconds. |
+| `starting` | Green room: track name and a 3-second countdown. |
+| `playing` | `RunEngine` and `MotionTracker` are stepped once per camera frame. |
+| `paused` | Resume goes back through calibration so the player has time to get set. |
+| `gameOver` | Final score, saved to Score History, with Play Again and Menu. |
 | `unavailable` | No camera, or permission refused. |
 
-Losing the body for two seconds during play drops back to `calibrating`
-rather than freezing the markers on screen.
+Losing the body for two seconds during play drops back to `calibrating` rather
+than quietly draining Taksu for something the player could not have scored.
 
-### Pose detection
+## Body tracking
 
-`CameraBodyPoseService` runs `VNDetectHumanBodyPoseRequest` on the front
-camera. Frames are analysed and dropped — nothing is recorded or stored.
+`CameraBodyPoseService` runs `VNDetectHumanBodyPoseRequest` on the front camera.
+Frames are analysed and dropped — nothing is recorded or stored. `MotionTracker`
+is the only place the joint data and the game rules meet.
 
-Poses are not compared in raw camera coordinates. A body is first converted to
+Nothing is compared in raw camera coordinates. A body is first converted to
 **body space** by `BodyFrame`: the origin is the hip centre and one unit is the
-length of the torso. That makes a pose definition independent of how far the
+length of the torso. That makes every threshold independent of how far the
 player stands from the camera, where they stand, and how tall they are.
-Comparing raw coordinates would only match a player standing in exactly the
-same spot as whoever recorded the pose.
 
-Each pose is checked two ways, because either alone is too weak:
+- **Ngayog** — `NgayogDetector` measures how far the nose sits to one side of the
+  shoulder centre. A cycle counts once both extremes have been visited, with a
+  neutral band in the middle so a head parked on the boundary cannot rattle off
+  cycles.
+- **Nge'ed** — `SquatDetector` compares hip height against a slowly-adapting
+  standing baseline. The baseline never follows the player downwards, so a slow
+  recovery cannot be learned as the new normal.
+- **Agem** — `PoseEvaluator` checks nine points (neck, wrists, elbows, knees,
+  ankles) two ways: **targets**, where each point should sit with a tolerance in
+  torso lengths, and **rules**, angles the body has to make. Positions alone are
+  too weak — a player can hit both wrist targets with bent elbows.
 
-- **Targets** — where each of the five tracked points should sit, with a
-  tolerance in torso lengths. These drive the coloured markers.
-- **Rules** — angles the body has to make. Agem needs the arms to form one
-  straight horizontal line, and a player can hit both wrist targets with bent
-  elbows, so `lineAngle` and `jointAngle` rules catch what positions cannot.
-  Each rule lists which markers turn red when it is broken.
-
-### Adding a pose
+### Adding or retuning a pose
 
 Edit `Nari/Resources/Poses/poses.json` — no code change needed. The comments on
 `PoseTarget` and `PoseRule` explain every field.
 
-To record the numbers instead of guessing them, run with `-debugPrintPose`,
-stand in the pose, and copy the target lines printed to the console once per
-second:
+**The numbers in there are estimates and have not been tuned on a real body.**
+To record real ones, run with `-debugPrintPose`, stand in the pose, and copy the
+target lines printed to the console once per second:
 
 ```bash
 xcrun simctl launch booted com.yuknari.Nari -debugPrintPose
 ```
 
 The simulator has no camera, so `AppServices.makeBodyPoseSource()` hands back
-`SimulatedBodyPoseSource` there: a fake dancer that stands still, then raises
-its arms into agem. It exists so the whole flow can be exercised without a
-device — pose tuning still needs a real iPad.
+`SimulatedBodyPoseSource` there: a fake dancer that tilts, squats, and drops into
+agem kanan on three loops of different lengths. Because those loops drift against
+the interrupt timer, a simulator run hits successes and failures on its own — but
+pose tuning still needs a real iPad.
 
-### Localisation
+## Localisation
 
-Strings live in `Localizer` as Swift dictionaries keyed by `LocalizedKey`, not
-in `.lproj` bundles. The player can switch between Bahasa Indonesia and English
-in the settings popup, and a dictionary lookup re-renders SwiftUI immediately,
-while bundle localisation would only pick up the new language on relaunch.
+Strings live in `Localizer` as Swift dictionaries keyed by `LocalizedKey`, not in
+`.lproj` bundles. The player can switch between Bahasa Indonesia and English in
+the settings popup, and a dictionary lookup re-renders SwiftUI immediately, while
+bundle localisation would only pick up the new language on relaunch.
 
 To add a string: add a case to `LocalizedKey`, then add it to both tables in
 `Localizer`. A missing translation is a compile error.
 
 ## Dropping in artwork
 
-Two image sets are already wired up and empty. Add the PNGs in Xcode and the
-placeholders disappear on their own — no code change needed.
+Image sets are wired up and empty. Add the PNGs in Xcode and the placeholders
+disappear on their own — no code change needed.
 
 | Image set         | Used by                | Placeholder while empty                |
 |-------------------|------------------------|----------------------------------------|
 | `Dancer`          | `DancerView`           | SF Symbol silhouette in a dashed frame |
-| `GameTitle`       | `GameTitleView`        | Styled "Yuk, Nari!" text logo          |
+| `GameTitle`       | `GameTitleView`        | Type-set "Yuk, Nari!" logo             |
 | `TutorialStep1-3` | `TutorialSketchView`   | Pencil drawing rendered in code        |
-| `PoseAgem`        | `PoseInstructionPanel` | SF Symbol in a dashed frame            |
+| `PoseAgemKanan`   | `PoseCueCard`          | SF Symbol                              |
+| `PoseAgemKiri`    | `PoseCueCard`          | SF Symbol                              |
+| `PoseNgayog`      | `PoseCueCard`          | SF Symbol                              |
 
-Both views check `UIImage(named:)` at render time and prefer the artwork when it
-is present.
+### Fonts
+
+The Figma uses **Henny Penny** for display type and **Instrument Serif** for
+buttons. Neither ships with iOS. `Theme.Fonts` looks for `HennyPenny-Regular` and
+`InstrumentSerif-Regular` and falls back to the system serif when they are not in
+the bundle, so the app runs either way. To use the real thing, add the `.ttf`
+files to the target and list them under `UIAppFonts` in the Info plist.
+
+### Painted surfaces
+
+There are no texture images. `PaintedShapes.swift` draws them: `PaintTexture` for
+the painted grounds, `TornEdgeShape` for the paper the meter and cue cards are
+printed on, and `BrushSwatchShape` for the score, timer, and Game Over marks.
+Each shape is seeded from a fixed number so its silhouette never changes between
+redraws — an unseeded shape would boil.
 
 ## To do
 
 - Real credits: replace the placeholder names in `StaticCreditsRepository`.
 - Audio: `SilentAudioService` only remembers the volume levels. Swap in an
   `AVAudioPlayer`-backed implementation and add the gamelan loop plus the effect
-  files listed in `SoundEffect`.
-- Tune the agem numbers on a real iPad with `-debugPrintPose`; the values in
-  `poses.json` are estimates.
-- More poses: mendak and ngegol, then a sequence rather than one pose on repeat.
-- Scoring and session results.
+  files listed in `SoundEffect`, which covers every cue in the GDD's sound list.
+  The Freeze cue is meant to *cut* the music, not layer over it.
+- Tune `poses.json` on a real iPad with `-debugPrintPose`.
+- Accessibility: adjustable reaction windows (`RunRules` already isolates them);
+  a reduce-flashing toggle for the Freeze frame.
+- A skippable Training Stage teaching the five poses before the timed loop.
+- (Stretch) GameKit leaderboard as a second tab beside Score History.
 
 ### About Foundation Models
 
@@ -176,7 +221,7 @@ xcrun simctl launch booted com.yuknari.Nari -debugAutoStart
 xcrun simctl launch booted com.yuknari.Nari -debugPrintPose
 ```
 
-`-debugPopup` accepts `settings` or `credits`. `-debugAutoStart` takes no value
-and walks itself from the menu through the curtain transition and the tutorial
-into a live session. `-debugPrintPose` logs the player's joints in
-pose-definition coordinates once a second.
+`-debugPopup` accepts `settings`, `credits`, or `scores`. `-debugAutoStart` takes
+no value and walks itself from the menu through the tutorial into a live session.
+`-debugPrintPose` logs the player's joints in pose-definition coordinates once a
+second.

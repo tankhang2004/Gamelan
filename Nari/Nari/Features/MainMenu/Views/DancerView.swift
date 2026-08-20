@@ -1,87 +1,45 @@
 import SwiftUI
-import UIKit
 
-/// The dancer standing centre stage.
-///
-/// Drops in the `Dancer` image set as soon as artwork is added to
-/// `Assets.xcassets`; until then it draws a labelled silhouette placeholder so
-/// the layout is already correct.
+/// The painted dancer that fills the middle of the menu. Falls back to a
+/// silhouette in a dashed frame until the artwork is dropped into the `Dancer`
+/// image set.
 struct DancerView: View {
-    var height: CGFloat = 520
-
-    @State private var isBreathing = false
-
-    private var artwork: UIImage? { UIImage(named: "Dancer") }
+    let height: CGFloat
+    /// A slow sway, so the menu is never completely still.
+    @State private var sway = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            Group {
-                if let artwork {
-                    Image(uiImage: artwork)
-                        .resizable()
-                        .scaledToFit()
-                } else {
-                    placeholder
-                }
+        Group {
+            if UIImage(named: "Dancer") != nil {
+                Image("Dancer")
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                placeholder
             }
-            .frame(height: height)
-            .scaleEffect(isBreathing ? 1.012 : 0.988, anchor: .bottom)
-            .animation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true), value: isBreathing)
-
-            // Contact shadow on the stage floor.
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [.black.opacity(0.55), .clear],
-                        center: .center,
-                        startRadius: 2,
-                        endRadius: height * 0.22
-                    )
-                )
-                .frame(width: height * 0.46, height: height * 0.075)
-                .offset(y: -height * 0.02)
         }
-        .shadow(color: Theme.Palette.curtainGold.opacity(0.35), radius: 40)
-        .onAppear { isBreathing = true }
-        .accessibilityHidden(true)
+        .frame(height: height)
+        .rotationEffect(.degrees(sway ? 1.1 : -1.1), anchor: .bottom)
+        .animation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true), value: sway)
+        .onAppear { sway = true }
     }
 
     private var placeholder: some View {
         ZStack {
-            Image(systemName: "figure.dance")
-                .resizable()
-                .scaledToFit()
-                .fontWeight(.regular)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Theme.Palette.goldTrimBright, Theme.Palette.curtainGoldDeep],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .padding(.horizontal, 24)
-                .padding(.vertical, 18)
-        }
-        .frame(width: height * 0.62)
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .strokeBorder(
-                    Theme.Palette.parchment.opacity(0.35),
-                    style: StrokeStyle(lineWidth: 2, dash: [10, 8])
+                    Theme.Palette.ink.opacity(0.45),
+                    style: StrokeStyle(lineWidth: 3, dash: [12, 10])
                 )
-        )
-        .overlay(alignment: .bottom) {
-            Text("Dancer placeholder")
-                .font(Theme.Fonts.body(13))
-                .foregroundStyle(Theme.Palette.parchment.opacity(0.55))
-                .padding(.bottom, 8)
-        }
-    }
-}
 
-#Preview {
-    ZStack {
-        StageBackdropView()
-        DancerView()
+            VStack(spacing: 14) {
+                Image(systemName: "figure.dance")
+                    .font(.system(size: height * 0.30, weight: .light))
+                Text("Dancer")
+                    .font(Theme.Fonts.body(height * 0.045))
+            }
+            .foregroundStyle(Theme.Palette.ink.opacity(0.5))
+        }
+        .aspectRatio(0.72, contentMode: .fit)
     }
 }

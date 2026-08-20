@@ -34,19 +34,20 @@ struct BodyPoseSnapshot: Sendable {
         required.allSatisfy { position(of: $0) != nil }
     }
 
-    /// Joints that must be visible before the game will start: the five scored
-    /// points plus the shoulders and hips used to size the body.
+    /// Joints that must be visible before the game will start: the nine scored
+    /// points, the shoulders and hips used to size the body, and the nose the
+    /// ngayog tilt is read from.
     static let requiredForPlay: [BodyJoint] = [
-        .nose, .leftShoulder, .rightShoulder, .leftHip, .rightHip,
-        .leftWrist, .rightWrist, .leftKnee, .rightKnee,
+        .nose, .neck, .leftShoulder, .rightShoulder, .leftHip, .rightHip,
+        .leftElbow, .rightElbow, .leftWrist, .rightWrist,
+        .leftKnee, .rightKnee, .leftAnkle, .rightAnkle,
     ]
 
     /// True when every required joint is visible and sits inside the frame with
     /// a little margin, which is the closest we get to "head to toe is in shot".
     func isFullBodyInFrame(margin: CGFloat = 0.03) -> Bool {
-        let ankles = [position(of: .leftAnkle), position(of: .rightAnkle)].compactMap { $0 }
-        let points = Self.requiredForPlay.compactMap { position(of: $0) } + ankles
-        guard points.count >= Self.requiredForPlay.count else { return false }
+        let points = Self.requiredForPlay.compactMap { position(of: $0) }
+        guard points.count == Self.requiredForPlay.count else { return false }
 
         return points.allSatisfy { point in
             point.x > margin && point.x < 1 - margin && point.y > margin && point.y < 1 - margin

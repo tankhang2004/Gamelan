@@ -1,14 +1,27 @@
 import Foundation
 
-/// Sound effects the menu can trigger. Concrete files are wired up later; the
-/// cases exist now so call sites do not change when audio assets land.
+/// Every sound the game asks for, one case per moment in the design's cue list.
+/// Concrete files are wired up later; the cases exist now so call sites do not
+/// change when the audio assets land.
 enum SoundEffect: String, Sendable {
     case buttonTap
-    case curtainOpen
     case popupOpen
     case popupClose
     case calibrationComplete
-    case poseComplete
+
+    case ngayogCycle
+    case squatCue
+    case squatHit
+    case squatMiss
+    /// The gong that marks the music cutting out for a Freeze.
+    case freezeCue
+    /// The pose locked in and the hold began.
+    case freezeLocked
+    case freezeHeld
+    case freezeBroken
+    case freezeFailed
+    case energyLow
+    case gameOver
 }
 
 /// Audio seam for the whole app.

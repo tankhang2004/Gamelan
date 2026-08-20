@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// The play session: placement tutorial, calibration, then the pose loop with
-/// the camera behind it.
+/// The play session: placement tutorial, calibration, green room, then the
+/// scored loop with the camera behind it.
 struct GameplayView: View {
     /// Owned by `RootView` so the camera session survives view updates.
     let viewModel: GameplayViewModel
+    let scores: ScoreHistoryStoring
 
     @Environment(\.strings) private var strings
 
@@ -21,60 +22,36 @@ struct GameplayView: View {
             case .unavailable(let problem):
                 unavailable(problem)
 
-            case .preparing, .calibrating, .playing, .paused:
+            case .preparing, .calibrating, .starting, .playing, .paused, .gameOver:
                 stage
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: viewModel.phase)
+        .animation(Theme.Motion.screenChange, value: viewModel.phase)
         .ignoresSafeArea()
     }
 
     // MARK: - Stage
 
-    private var showsPanel: Bool {
-        viewModel.phase == .playing || viewModel.phase == .paused
-    }
-
-    private var borderProgress: Double {
-        switch viewModel.phase {
-        case .calibrating: viewModel.calibrationProgress
-        case .playing: viewModel.holdProgress
-        default: 0
-        }
-    }
-
     private var stage: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 0) {
-                cameraArea
+        ZStack {
+            cameraArea
 
-                if showsPanel {
-                    PoseInstructionPanel(
-                        pose: viewModel.pose,
-                        language: strings.language,
-                        completedReps: viewModel.completedReps,
-                        holdProgress: viewModel.holdProgress,
-                        onPause: { viewModel.pause() }
-                    )
-                    .frame(width: min(300, proxy.size.width * 0.25))
-                    .transition(.move(edge: .trailing))
-                }
+            if viewModel.phase == .playing {
+                hud
+                    .transition(.opacity)
             }
-            .overlay {
-                StageProgressBorder(progress: borderProgress, color: Theme.Palette.poseCorrect)
-                    .padding(5)
-            }
-            .overlay { phaseOverlay }
-            .overlay { celebration }
-            .animation(.easeInOut(duration: 0.35), value: showsPanel)
+
+            phaseOverlay
+            eventFlash
         }
-        .background(Color.black)
+        .overlay { freezeFrame }
+        .background(Theme.Palette.ink)
     }
 
     private var cameraArea: some View {
         GeometryReader { proxy in
             ZStack {
-                Color.black
+                Theme.Palette.ink
 
                 if let session = viewModel.captureSession {
                     CameraPreviewView(session: session) { layer in
@@ -84,34 +61,141 @@ struct GameplayView: View {
                     simulatorStandIn
                 }
 
-                if viewModel.phase == .playing {
+                if viewModel.run.phase.cuedSide != nil {
                     PoseMarkersView(
-                        markers: viewModel.markers,
-                        progress: viewModel.markerProgress,
+                        markers: viewModel.tracker.markers,
                         mapper: CameraFrameMapper(
                             imageSize: viewModel.imageSize,
                             viewSize: proxy.size,
                             isMirrored: viewModel.isPreviewMirrored
-                        ),
-                        showsTargets: true
+                        )
                     )
                 }
             }
         }
     }
 
-    /// The simulator has no camera, so the fake pose source drives the markers
-    /// over a plain stage instead of a video feed.
+    /// The simulator has no camera, so the fake dancer drives the markers over a
+    /// painted ground instead of a video feed.
     private var simulatorStandIn: some View {
         ZStack(alignment: .bottom) {
-            StageBackdropView()
+            PaintTexture(seed: 31, base: Theme.Palette.paperShade, highlight: Theme.Palette.paper, shadow: Theme.Palette.ochreDeep)
             HStack(spacing: 6) {
                 Image(systemName: "video.slash")
                 Text(strings[.cameraMissingTitle])
             }
-            .font(Theme.Fonts.label(14))
-            .foregroundStyle(Theme.Palette.parchment.opacity(0.4))
+            .font(Theme.Fonts.label(15))
+            .foregroundStyle(Theme.Palette.ink.opacity(0.45))
             .padding(.bottom, 24)
+        }
+    }
+
+    // MARK: - HUD
+
+    private var hud: some View {
+        GeometryReader { proxy in
+            let inset = proxy.size.height * 0.045
+
+            ZStack {
+                VStack {
+                    HStack(alignment: .top) {
+                        PaintSwatchReadout(text: "\(viewModel.run.score)", fontSize: proxy.size.height * 0.045)
+                        Spacer(minLength: 0)
+                        PaintSwatchReadout(
+                            text: viewModel.clockText,
+                            fill: Theme.Palette.ochre,
+                            textColor: Theme.Palette.ink,
+                            fontSize: proxy.size.height * 0.045,
+                            seed: 8
+                        )
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                HStack {
+                    TaksuMeterView(fraction: viewModel.run.energyFraction, isLow: viewModel.run.isEnergyLow)
+                        .frame(width: proxy.size.width * 0.055)
+                        .padding(.vertical, proxy.size.height * 0.14)
+                    Spacer(minLength: 0)
+                    cueCard
+                        .frame(width: proxy.size.width * 0.19)
+                        .padding(.vertical, proxy.size.height * 0.16)
+                }
+
+                VStack {
+                    Spacer().frame(height: proxy.size.height * 0.14)
+                    prompt
+                    Spacer(minLength: 0)
+                }
+
+                VStack {
+                    Spacer(minLength: 0)
+                    HStack {
+                        Spacer(minLength: 0)
+                        Button(action: { viewModel.pause() }) {
+                            Image(systemName: "pause.fill")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundStyle(Theme.Palette.cream)
+                                .padding(16)
+                                .background(Circle().fill(Theme.Palette.indigo))
+                                .overlay(Circle().strokeBorder(Theme.Palette.ink, lineWidth: 4))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(inset)
+        }
+    }
+
+    @ViewBuilder
+    private var cueCard: some View {
+        if let pose = viewModel.cuedPose {
+            PoseCueCard(
+                title: pose.name(for: strings.language),
+                artworkName: pose.artworkName,
+                symbolName: "figure.stand"
+            )
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+        } else {
+            PoseCueCard(
+                title: strings[.cueNgayog],
+                artworkName: "PoseNgayog",
+                symbolName: "figure.walk"
+            )
+        }
+    }
+
+    private var prompt: some View {
+        let run = viewModel.run
+        return Group {
+            switch run.phase {
+            case .ngayog:
+                CuePromptView(text: strings[.cueWalk], progress: 0, tint: Theme.Palette.indigo)
+            case .squatCue:
+                CuePromptView(text: strings[.cueSquat], progress: run.phaseProgress, tint: Theme.Palette.cueOrange)
+            case .freezeGrace:
+                CuePromptView(text: strings[.cueFreeze], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink)
+            case .freezeHold:
+                CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect)
+            case .gameOver:
+                EmptyView()
+            }
+        }
+        .animation(Theme.Motion.cueDrop, value: run.phase.isInterrupt)
+    }
+
+    /// The Freeze cue is signalled by the music cutting out, which is no signal
+    /// at all to a player who is hard of hearing or in a noisy room. The orange
+    /// frame appears at the same instant so the cue is never audio-only.
+    @ViewBuilder
+    private var freezeFrame: some View {
+        if case .freezeGrace = viewModel.run.phase {
+            RoundedRectangle(cornerRadius: 0)
+                .strokeBorder(Theme.Palette.cueOrange, lineWidth: 26)
+                .ignoresSafeArea()
+                .transition(.opacity)
+                .animation(.easeOut(duration: 0.15), value: viewModel.run.phase)
         }
     }
 
@@ -124,77 +208,131 @@ struct GameplayView: View {
             banner(title: strings[.calibrationTitle], subtitle: strings[.calibrationSearching])
 
         case .calibrating:
-            VStack {
-                banner(
-                    title: strings[.calibrationTitle],
-                    subtitle: viewModel.isBodyVisible
-                        ? strings[.calibrationInstruction]
-                        : strings[.calibrationSearching]
-                )
-                Spacer()
-            }
-            .padding(.top, 26)
+            ZStack {
+                VStack {
+                    banner(
+                        title: strings[.calibrationTitle],
+                        subtitle: viewModel.isBodyVisible
+                            ? strings[.calibrationInstruction]
+                            : strings[.calibrationSearching]
+                    )
+                    Spacer()
+                }
+                .padding(.top, 40)
 
-        case .playing:
-            VStack {
-                banner(title: viewModel.pose.name(for: strings.language),
-                       subtitle: strings[.playHoldInstruction])
-                Spacer()
+                StageProgressBorder(progress: viewModel.calibrationProgress, color: Theme.Palette.poseCorrect)
+                    .padding(6)
             }
-            .padding(.top, 26)
+
+        case .starting(let remaining):
+            greenRoom(remaining: remaining)
 
         case .paused:
             pauseOverlay
 
-        case .tutorial, .unavailable:
+        case .gameOver:
+            GameOverView(
+                score: viewModel.run.score,
+                survived: viewModel.clockText,
+                isBest: scores.best.map { $0.score <= viewModel.run.score } ?? true,
+                onRetry: { viewModel.retry() },
+                onMenu: { viewModel.exit() }
+            )
+
+        case .tutorial, .playing, .unavailable:
             EmptyView()
+        }
+    }
+
+    /// The green room: the track title and a countdown over a live preview, so
+    /// the player has a moment to get set before scoring starts.
+    private func greenRoom(remaining: Double) -> some View {
+        ZStack {
+            Theme.Palette.ink.opacity(0.45).ignoresSafeArea()
+
+            VStack(spacing: 18) {
+                Text(strings[.greenRoomTrack])
+                    .font(Theme.Fonts.label(26))
+                    .foregroundStyle(Theme.Palette.cream.opacity(0.85))
+
+                Text("\(Int(remaining.rounded(.up)))")
+                    .font(Theme.Fonts.title(150))
+                    .foregroundStyle(Theme.Palette.cream)
+                    .contentTransition(.numericText(countsDown: true))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: Int(remaining.rounded(.up)))
+
+                Text(strings[.greenRoomStart])
+                    .font(Theme.Fonts.title(40))
+                    .foregroundStyle(Theme.Palette.ochre)
+            }
+        }
+    }
+
+    /// A short flash naming what just happened, so a hit or a miss is legible
+    /// without watching the meter.
+    @ViewBuilder
+    private var eventFlash: some View {
+        if let event = viewModel.lastEvent, let text = flashText(for: event) {
+            VStack {
+                Spacer()
+                Text(text.label)
+                    .font(Theme.Fonts.title(52))
+                    .foregroundStyle(text.color)
+                    .shadow(color: Theme.Palette.ink, radius: 0, x: 3, y: 3)
+                    .padding(.bottom, 90)
+            }
+            .id(viewModel.lastEventAt)
+            .transition(.scale(scale: 0.7).combined(with: .opacity))
+            .animation(.spring(response: 0.35, dampingFraction: 0.6), value: viewModel.lastEventAt)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private func flashText(for event: RunEvent) -> (label: String, color: Color)? {
+        switch event {
+        case .squatHit: (strings[.flashNice], Theme.Palette.poseCorrect)
+        case .squatMissed: (strings[.flashMissed], Theme.Palette.poseWrong)
+        case .freezeLocked: (strings[.flashLocked], Theme.Palette.poseCorrect)
+        case .freezeHeldFully: (strings[.flashPerfect], Theme.Palette.ochre)
+        case .freezeBrokenEarly: (strings[.flashBroke], Theme.Palette.cream)
+        case .freezeFailed: (strings[.flashTooSlow], Theme.Palette.poseWrong)
+        case .ngayogCycle, .squatCued, .freezeCued, .energyLow, .gameOver: nil
         }
     }
 
     private func banner(title: String, subtitle: String) -> some View {
         VStack(spacing: 2) {
             Text(title)
-                .font(Theme.Fonts.label(20))
+                .font(Theme.Fonts.label(22))
                 .foregroundStyle(Theme.Palette.ink)
             Text(subtitle)
-                .font(Theme.Fonts.body(15))
+                .font(Theme.Fonts.body(16))
                 .foregroundStyle(Theme.Palette.ink.opacity(0.75))
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 12)
-        .background(Capsule().fill(Theme.Palette.parchment.opacity(0.92)))
-        .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+        .padding(.horizontal, 30)
+        .padding(.vertical, 14)
+        .background(Capsule().fill(Theme.Palette.paper.opacity(0.94)))
+        .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: 4))
+        .shadow(color: Theme.Palette.ink.opacity(0.35), radius: 10, y: 4)
     }
 
     private var pauseOverlay: some View {
         ZStack {
-            Color.black.opacity(0.6).ignoresSafeArea()
+            Theme.Palette.scrim.ignoresSafeArea()
 
-            VStack(spacing: 22) {
+            VStack(spacing: 24) {
                 Text(strings[.playPause])
-                    .font(Theme.Fonts.title(38))
-                    .foregroundStyle(Theme.Palette.curtainGold)
+                    .font(Theme.Fonts.title(52))
+                    .foregroundStyle(Theme.Palette.ochre)
 
                 Button(strings[.playResume]) { viewModel.resume() }
                     .buttonStyle(PopupActionButtonStyle())
 
                 Button(strings[.playExit]) { viewModel.exit() }
                     .buttonStyle(.plain)
-                    .font(Theme.Fonts.label(18))
-                    .foregroundStyle(Theme.Palette.parchment.opacity(0.85))
+                    .font(Theme.Fonts.label(19))
+                    .foregroundStyle(Theme.Palette.cream.opacity(0.85))
             }
-        }
-    }
-
-    @ViewBuilder
-    private var celebration: some View {
-        if viewModel.isCelebrating {
-            Text(strings[.playWellDone])
-                .font(Theme.Fonts.title(64))
-                .foregroundStyle(Theme.Palette.poseCorrect)
-                .shadow(color: .black.opacity(0.5), radius: 14, y: 6)
-                .transition(.scale.combined(with: .opacity))
-                .animation(.spring(response: 0.4, dampingFraction: 0.6), value: viewModel.isCelebrating)
         }
     }
 
@@ -204,20 +342,20 @@ struct GameplayView: View {
         let isPermission = problem == .permissionDenied
 
         return ZStack {
-            StageBackdropView()
+            PaintTexture()
 
             VStack(spacing: 16) {
                 Image(systemName: isPermission ? "lock.slash" : "video.slash")
-                    .font(.system(size: 44))
-                    .foregroundStyle(Theme.Palette.curtainGold)
+                    .font(.system(size: 46))
+                    .foregroundStyle(Theme.Palette.indigo)
 
                 Text(strings[isPermission ? .cameraDeniedTitle : .cameraMissingTitle])
-                    .font(Theme.Fonts.title(30))
-                    .foregroundStyle(Theme.Palette.parchment)
+                    .font(Theme.Fonts.title(34))
+                    .foregroundStyle(Theme.Palette.ink)
 
                 Text(strings[isPermission ? .cameraDeniedBody : .cameraMissingBody])
-                    .font(Theme.Fonts.body(17))
-                    .foregroundStyle(Theme.Palette.parchment.opacity(0.75))
+                    .font(Theme.Fonts.body(18))
+                    .foregroundStyle(Theme.Palette.ink.opacity(0.75))
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 460)
 
@@ -232,8 +370,8 @@ struct GameplayView: View {
 
                     Button(strings[.gameplayBack]) { viewModel.exit() }
                         .buttonStyle(.plain)
-                        .font(Theme.Fonts.label(18))
-                        .foregroundStyle(Theme.Palette.parchment.opacity(0.85))
+                        .font(Theme.Fonts.label(19))
+                        .foregroundStyle(Theme.Palette.ink.opacity(0.75))
                 }
             }
             .padding(40)
@@ -245,11 +383,13 @@ struct GameplayView: View {
     let services = AppServices.preview()
     return GameplayView(
         viewModel: GameplayViewModel(
-            pose: .fallbackAgem,
+            poses: services.poses,
             source: SimulatedBodyPoseSource(),
             audio: services.audio,
+            scores: services.scores,
             onExit: {}
-        )
+        ),
+        scores: services.scores
     )
-    .environment(\.strings, Localizer(language: .indonesian))
+    .environment(\.strings, Localizer(language: .english))
 }

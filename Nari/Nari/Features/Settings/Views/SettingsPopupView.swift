@@ -45,11 +45,11 @@ struct SettingsPopupView: View {
                 Text(viewModel.percentText(for: value.wrappedValue))
                     .font(Theme.Fonts.label(17))
                     .monospacedDigit()
-                    .foregroundStyle(Theme.Palette.woodMid)
+                    .foregroundStyle(Theme.Palette.ink.opacity(0.6))
             }
 
             Slider(value: value, in: 0...1)
-                .tint(Theme.Palette.curtainRed)
+                .tint(Theme.Palette.indigo)
         }
     }
 
@@ -74,7 +74,7 @@ struct SettingsPopupView: View {
 #Preview {
     let services = AppServices.preview()
     return ZStack {
-        StageBackdropView()
+        PaintTexture()
         SettingsPopupView(viewModel: SettingsViewModel(settings: services.settings), onClose: {})
     }
     .environment(\.strings, services.settings.localizer)

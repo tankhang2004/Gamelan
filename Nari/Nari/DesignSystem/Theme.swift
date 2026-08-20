@@ -1,87 +1,118 @@
 import SwiftUI
 
-/// Colours, type styles, and timings shared by every screen. Keeping them in one
-/// place means the look can be retuned once the real art direction lands.
+/// Colours, type styles, and timings shared by every screen.
+///
+/// The values come from the Hi-Fi section of the Figma file: thick paint on
+/// paper, periwinkle and ink over a yellow ground. Nothing here is a flat
+/// system colour on purpose — every surface is meant to read as painted.
 enum Theme {
 
     // MARK: - Palette
 
     enum Palette {
-        /// The three cloth colours of a Balinese ceremonial curtain.
-        static let curtainRed = Color(hex: 0xB0272E)
-        static let curtainRedDeep = Color(hex: 0x7E1A20)
-        static let curtainGold = Color(hex: 0xE9B63C)
-        static let curtainGoldDeep = Color(hex: 0xC08C1E)
-        static let curtainCream = Color(hex: 0xF4E7D0)
+        /// The periwinkle every button, meter, and title is painted in.
+        static let indigo = Color(hex: 0x5B62B0)
+        static let indigoDeep = Color(hex: 0x3F4589)
+        static let indigoLight = Color(hex: 0x8C92CE)
 
-        /// Carved wood and gold leaf, used for plaques and frames.
-        static let woodDark = Color(hex: 0x40230F)
-        static let woodMid = Color(hex: 0x6B3B1B)
-        static let goldTrim = Color(hex: 0xE2BE6A)
-        static let goldTrimBright = Color(hex: 0xF7E2A8)
+        /// Outline colour. Every painted shape is drawn round in this.
+        static let ink = Color(hex: 0x0F1923)
 
-        /// Stage behind the curtains.
-        static let stageDeep = Color(hex: 0x14100E)
-        static let stageWarm = Color(hex: 0x2A1B14)
+        /// The yellow ground the menu and cue cards sit on.
+        static let ochre = Color(hex: 0xE8CE2A)
+        static let ochreDeep = Color(hex: 0xC9A81E)
+        static let ochreLight = Color(hex: 0xF4E45C)
+
+        /// Torn paper the pose cards and meters are printed on.
+        static let paper = Color(hex: 0xEFE7D6)
+        static let paperShade = Color(hex: 0xD8CDB6)
+
+        /// Cream lettering, used on top of indigo and ink.
+        static let cream = Color(hex: 0xE5ECE4)
 
         /// Pose feedback: a body point in the right place, and one that is not.
-        static let poseCorrect = Color(hex: 0x2FBF57)
+        static let poseCorrect = Color(hex: 0x2FA090)
         static let poseWrong = Color(hex: 0xE2564E)
 
-        /// Sketchbook paper for the tutorial drawings.
-        static let paper = Color(hex: 0xF7F2E6)
-        static let pencil = Color(hex: 0x2A2622)
+        /// The orange frame that flashes round the screen on a Freeze cue.
+        static let cueOrange = Color(hex: 0xF08A3C)
+        /// The pink brushstroke Game Over is written across.
+        static let gameOverPink = Color(hex: 0xFA3D68)
 
-        static let ink = Color(hex: 0x2B1810)
-        static let parchment = Color(hex: 0xFBF3E2)
-        static let scrim = Color.black.opacity(0.55)
+        /// Taksu meter fill, low to full.
+        static let taksuLow = Color(hex: 0xE2564E)
+        static let taksuMid = Color(hex: 0xE8CE2A)
+        static let taksuFull = Color(hex: 0x5B62B0)
+
+        static let pencil = Color(hex: 0x2A2622)
+        static let scrim = Color(hex: 0x0F1923).opacity(0.62)
     }
 
     // MARK: - Layout
 
     enum Metrics {
-        /// Height of an 11-inch iPad in landscape, the size the menu is tuned
-        /// for. `MenuLayout` scales everything else against it.
+        /// Height of an 11-inch iPad in landscape, the size every screen is
+        /// tuned for. `MenuLayout` scales everything else against it.
         static let referenceStageHeight: CGFloat = 834
         static let screenPadding: CGFloat = 48
         static let popupCornerRadius: CGFloat = 28
         static let popupMaxWidth: CGFloat = 620
+        /// Width of the ink outline drawn round painted shapes, at reference size.
+        static let inkStroke: CGFloat = 5
     }
 
     // MARK: - Motion
 
     enum Motion {
-        /// Curtains swinging shut when the menu appears.
-        static let curtainClose = Animation.timingCurve(0.25, 0.9, 0.3, 1.0, duration: 1.0)
-        /// Curtains swinging aside after the player picks a mode. The spring
-        /// overshoot is what makes the cloth read as heavy and swinging.
-        static let curtainOpen = Animation.spring(response: 0.95, dampingFraction: 0.68)
-        static let curtainOpenDuration: TimeInterval = 1.05
-        static let curtainCloseDuration: TimeInterval = 1.0
-
         static let contentFade = Animation.easeOut(duration: 0.45)
         static let popup = Animation.spring(response: 0.38, dampingFraction: 0.82)
+
+        /// A cue card slamming onto the screen. The overshoot is what sells the
+        /// weight of a painted board being dropped into frame.
+        static let cueDrop = Animation.spring(response: 0.34, dampingFraction: 0.58)
+        /// Taksu changes are eased rather than snapped so the player can see
+        /// which direction the meter moved.
+        static let meter = Animation.easeOut(duration: 0.35)
+        static let screenChange = Animation.easeInOut(duration: 0.32)
     }
 
     // MARK: - Type
 
+    /// Display type is Henny Penny and button type is Instrument Serif, matching
+    /// the Figma. Neither ships with iOS, so each style falls back to the nearest
+    /// system design when the font file is not in the bundle — see the README for
+    /// how to drop the real files in.
     enum Fonts {
+        private static let display = "HennyPenny-Regular"
+        private static let serif = "InstrumentSerif-Regular"
+
         static func title(_ size: CGFloat) -> Font {
-            .system(size: size, weight: .heavy, design: .rounded)
+            custom(display, size: size) ?? .system(size: size, weight: .heavy, design: .serif)
         }
 
         static func label(_ size: CGFloat) -> Font {
-            .system(size: size, weight: .bold, design: .rounded)
+            custom(serif, size: size) ?? .system(size: size, weight: .semibold, design: .serif)
         }
 
         static func body(_ size: CGFloat) -> Font {
-            .system(size: size, weight: .regular, design: .rounded)
+            custom(serif, size: size) ?? .system(size: size, weight: .regular, design: .serif)
+        }
+
+        /// Numbers on the HUD. Monospaced digits so a rising score does not make
+        /// the swatch under it jitter.
+        static func readout(_ size: CGFloat) -> Font {
+            .system(size: size, weight: .bold, design: .serif).monospacedDigit()
+        }
+
+        private static func custom(_ name: String, size: CGFloat) -> Font? {
+            guard UIFont(name: name, size: size) != nil else { return nil }
+            return .custom(name, size: size)
         }
     }
 }
 
 extension Color {
-    /// Builds a colour from a 24-bit RGB literal such as `0xE9B63C`.
+    /// Builds a colour from a 24-bit RGB literal such as `0x5B62B0`.
     init(hex: UInt32) {
         self.init(
             .sRGB,
