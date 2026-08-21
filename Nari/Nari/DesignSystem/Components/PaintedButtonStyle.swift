@@ -31,23 +31,22 @@ struct PaintedButtonStyle: ButtonStyle {
 /// of the menu.
 struct PaintedIconButton: View {
     let symbol: String
-    var diameter: CGFloat = 78
+    var diameter: CGFloat = 75
     var fill: Color = Theme.Palette.cueOrange
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: diameter * 0.46, weight: .semibold))
-                .foregroundStyle(Theme.Palette.cream)
+                .font(.system(size: diameter * 0.6, weight: .semibold))
+                .foregroundStyle(.white)
                 .frame(width: diameter, height: diameter)
                 .background(Circle().fill(fill))
-                .overlay(Circle().strokeBorder(Theme.Palette.ink, lineWidth: diameter * 0.07))
         }
         .buttonStyle(.plain)
     }
 }
 
 #Preview {
-    PaintedIconButton(symbol: <#T##String#>, diameter: <#T##CGFloat#>, fill: <#T##Color#>, action: <#T##() -> Void#>)
+    PaintedIconButton(symbol: "gear", action: {})
 }

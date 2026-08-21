@@ -107,6 +107,8 @@
 			);
 			mainGroup = FEED00000000000000000002;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FEED00000000000000000003 /* Products */;
 			projectDirPath = "";
