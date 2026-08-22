@@ -37,6 +37,7 @@ struct Localizer: Equatable, Sendable {
         .cueFreeze: "DIAM!",
         .cueHold: "TAHAN",
         .cueNgayog: "Ngayog",
+        .cueNgeed: "Nge'ed",
 
         .flashNice: "MANTAP!",
         .flashMissed: "LEWAT",
@@ -82,10 +83,8 @@ struct Localizer: Equatable, Sendable {
         .gameplayBack: "Kembali ke Menu",
 
         .tutorialTitle: "Siapkan Ruangmu",
-        .tutorialStep1: "Taruh iPad di lantai, sandarkan sampai layarnya menghadapmu.",
-        .tutorialStep2: "Mundur beberapa langkah sampai badanmu muat di layar.",
-        .tutorialStep3: "Pastikan dari kepala sampai ujung kaki terlihat kamera.",
-        .tutorialStart: "MULAI",
+        .tutorialSetup: "Letakkan iPad di lantai tegak, tekan SIAP, dan mundur.",
+        .tutorialStart: "SIAP",
 
         .calibrationTitle: "KALIBRASI",
         .calibrationInstruction: "Berdiri tegak, biarkan seluruh badan terlihat",
@@ -124,6 +123,7 @@ struct Localizer: Equatable, Sendable {
         .cueFreeze: "FREEZE!",
         .cueHold: "HOLD",
         .cueNgayog: "Ngayog",
+        .cueNgeed: "Nge'ed",
 
         .flashNice: "NICE!",
         .flashMissed: "MISSED",
@@ -168,10 +168,8 @@ struct Localizer: Equatable, Sendable {
         .gameplayBack: "Back to Menu",
 
         .tutorialTitle: "Set Up Your Space",
-        .tutorialStep1: "Put the iPad on the floor, propped up so the screen faces you.",
-        .tutorialStep2: "Step back until your whole body fits on the screen.",
-        .tutorialStep3: "Check that head to toe is inside the camera view.",
-        .tutorialStart: "START",
+        .tutorialSetup: "Set your iPad upright on the floor, press READY, and step back",
+        .tutorialStart: "READY",
 
         .calibrationTitle: "CALIBRATION",
         .calibrationInstruction: "Stand tall and let your whole body show",

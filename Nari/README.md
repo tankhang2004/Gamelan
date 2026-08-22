@@ -64,29 +64,50 @@ the body just did — and returns the list of `RunEvent`s that resulted.
 |---|---|
 | `ngayog` | The default. Each full left-right head tilt banks +5 points and +2% Taksu. One shared timer counts down to the next interrupt. |
 | `squatCue` | 2 seconds to squat. Hit: +5 points, +5% Taksu. Miss: −8% Taksu. |
-| `freezeGrace` | 3 seconds to get all nine points into the cued agem. Failing ends the run outright. |
+| `freezeGrace` | 3 seconds to get all nine points into the cued agem. Failing costs −20% Taksu. |
 | `freezeHold` | 7 seconds of holding. +3% Taksu per second, and points drip at 20 × Taksu% per second, so a full meter pays more. Breaking early stops the drip with no penalty. |
-| `gameOver` | Taksu hit 0, or a Freeze was never matched in time. |
+| `gameOver` | Taksu hit 0. |
 
 Squat and Freeze share **one** timer rather than having one each, which is what
 makes "the two cues can never fire together" a property of the design instead of
 a check somewhere in the code. Every 45 seconds survived, that timer's interval
 shrinks by 10% (floor 2–5s) and the odds of it picking Freeze rise by 5 points
-(cap 40%).
+(cap 40%). No Freeze is cued in the first 10 seconds of a run.
 
 Every number above lives in `RunRules` and nothing else hard-codes one.
 
-### Two notes on the design document
+### Where this departs from the design document
 
-- The GDD gives the squat window as 1 second in the core loop section and 2
-  seconds in the mechanics table. `RunRules.squatWindow` uses **2**, on the
-  grounds that a 1-second reaction to an unannounced cue is close to impossible
-  for the age group this is for. Change it in one place if that call is wrong.
-- A Freeze that is never matched ends the run immediately, whatever the Taksu
-  meter says. Because the first interrupt can fire as early as 4 seconds in, a
-  run can be over in about 8 seconds through no fault the player could have
-  avoided. That is what the GDD asks for, but it is worth playtesting before it
-  is treated as settled.
+Two places, both deliberate, both one line to put back.
+
+**The squat window is 2 seconds, not 1.** The GDD gives 1 second in the core loop
+section and 2 in the mechanics section, and its scoring table contradicts itself
+— success at 2 seconds, miss at 1. Two seconds is the number used. The cue is
+unannounced, so the player spends a moment recognising it before a squat that
+takes half a second to a second of travel on its own, and `SquatDetector` needs
+the hips to actually cross its threshold on camera after that. One second leaves
+no margin for the age group this is for. If you go back to 1, lower
+`SquatDetector.depthThreshold` alongside it, or the window and the detector fight
+each other.
+
+**A missed Freeze costs Taksu instead of ending the run.** The GDD says both:
+−20% Taksu *and* the round ends immediately. Those two clauses do not sit
+together — if the round ends, the meter never gets to move on screen, so the
+−20% is a number nobody sees. Ending the run there also quietly makes Freeze the
+only real way to lose, which contradicts the document's own §5 ("the lose
+condition is the Taksu meter reaching 0%"): ngayog pays about +1.1%/sec at a
+steady rhythm while missing *every* squat costs about −1.2%/sec, so a player who
+keeps tilting cannot drain the meter for minutes. So the run now continues and
+`checkGameOver` decides, which puts every branch back on Taksu where the design
+says it belongs.
+
+**And Freeze is locked out for the first 10 seconds** (`RunRules.freezeLockout`).
+The first interrupt can arrive at 4 seconds; without the lockout a player could
+meet the hardest move in the game, and lose a fifth of the meter to it, before
+finding the walking rhythm the rest of the loop is built on.
+
+None of this is settled — it is reasoning about numbers, not playtesting. The
+knobs are all in `RunRules`.
 
 ## Play session
 

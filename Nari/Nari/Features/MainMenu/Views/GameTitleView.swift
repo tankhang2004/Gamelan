@@ -32,7 +32,7 @@ struct GameTitleView: View {
                 .offset(x: layout.scaled(18), y: layout.scaled(38))
         }
         .foregroundStyle(Theme.Palette.indigo)
-        .shadow(color: Theme.Palette.ink.opacity(0.28), radius: 0, x: 3, y: 5)
+        .shadow(color: Theme.Palette.ink.opacity(0.40), radius: 3, x: 12, y: 7)
         .frame(width: layout.titleWidth, height: layout.scaled(230), alignment: .topLeading)
     }
 }
@@ -41,6 +41,14 @@ struct GameTitleView: View {
     GeometryReader { proxy in
         ZStack {
             PaintTexture()
+            Image("bg")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(
+                                        width: proxy.size.width,
+                                        height: proxy.size.height
+                                    )
+                                    .clipped()
             GameTitleView(layout: MenuLayout(size: proxy.size))
         }
     }

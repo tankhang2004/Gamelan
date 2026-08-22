@@ -48,8 +48,7 @@ struct SquatDetector {
             isSquatting = true
         }
 
-        // Only track the player getting taller, or drifting while upright.
-        // Following them downwards would quietly redefine a squat as standing.
+        // While upright, slowly adapt the baseline. While squatting, freeze it.
         guard !isSquatting else { return }
         let rate = min(delta / baselineTimeConstant, 1)
         baseline = standing + (hipHeight - standing) * rate

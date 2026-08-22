@@ -16,17 +16,29 @@ struct MainMenuView: View {
 
             ZStack {
                 PaintTexture()
+                Image("bg-yellow")
+                            .resizable()
+                            .scaledToFill()
+                Image("dancer")
+                    .resizable()
+                    .scaledToFit()
+                    .offset(x:60)
+                    .frame(height: layout.dancerHeight)
+                            .opacity(viewModel.isContentVisible ? 1 : 0)
+                            .scaleEffect(
+                                viewModel.isContentVisible ? 1.5 : 0.96,
+                                anchor: .center
+                            )
+                            .animation(
+                                .spring(response: 0.7, dampingFraction: 0.85),
+                                value: viewModel.isContentVisible
+                            )
 
-                DancerView(height: layout.dancerHeight)
-                    .opacity(viewModel.isContentVisible ? 1 : 0)
-                    .scaleEffect(viewModel.isContentVisible ? 1 : 0.96, anchor: .bottom)
-                    .animation(.spring(response: 0.7, dampingFraction: 0.85), value: viewModel.isContentVisible)
-
-                chrome(layout: layout)
-
-                popupLayer
+                        chrome(layout: layout)
+                        popupLayer
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
+            .onTapGesture { viewModel.play() }
         }
         .ignoresSafeArea()
         .task { viewModel.onAppear() }
@@ -38,8 +50,7 @@ struct MainMenuView: View {
         VStack(spacing: 0) {
             HStack(alignment: .top) {
                 GameTitleView(layout: layout)
-                    .opacity(viewModel.isContentVisible ? 1 : 0)
-                    .offset(x: viewModel.isContentVisible ? 0 : -70)
+                    .offset(x: viewModel.isContentVisible ? 20 : -70, y:viewModel.isContentVisible ? 540 : 50)
                     .animation(.spring(response: 0.6, dampingFraction: 0.82), value: viewModel.isContentVisible)
 
                 Spacer(minLength: 0)
@@ -51,16 +62,13 @@ struct MainMenuView: View {
 
             HStack {
                 Spacer(minLength: 0)
-                Button(strings[.menuPlay]) { viewModel.play() }
-                    .buttonStyle(
-                        PaintedButtonStyle(
-                            height: layout.playButtonHeight,
-                            fontSize: layout.scaled(46)
-                        )
-                    )
+                Text("Tap to Start")
+                    .font(.system(size: layout.scaled(46), weight: .bold, design: .rounded))
+                    .foregroundStyle(.indigo)
                     .opacity(viewModel.isContentVisible ? 1 : 0)
-                    .offset(y: viewModel.isContentVisible ? 0 : 50)
+                    .offset(x: -50, y:0)
                     .animation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.12), value: viewModel.isContentVisible)
+                    .modifier(BlinkingModifier())
             }
         }
         .padding(.horizontal, layout.horizontalPadding)
@@ -82,6 +90,7 @@ struct MainMenuView: View {
                 )
             }
         }
+        .offset(x:-24)
     }
 
     // MARK: - Popups
@@ -110,6 +119,17 @@ struct MainMenuView: View {
         case nil:
             EmptyView()
         }
+    }
+}
+
+struct BlinkingModifier: ViewModifier {
+    @State private var isBlinking = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isBlinking ? 0.4 : 1)
+            .animation(.easeInOut(duration: 0.8).repeatForever(), value: isBlinking)
+            .onAppear { isBlinking = true }
     }
 }
 

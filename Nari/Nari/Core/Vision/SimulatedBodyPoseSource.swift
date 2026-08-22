@@ -53,7 +53,10 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
 
     private static let tiltPeriod: Double = 1.7
     private static let squatPeriod: Double = 11
-    private static let squatDuration: Double = 1.4
+    /// Long enough to sit through a whole nge'ed hold. At 1.4 seconds the fake
+    /// dancer stood up the moment the wave arrived and could never reach the
+    /// "held fully" branch, so the simulator could not walk it.
+    private static let squatDuration: Double = 7
     private static let agemPeriod: Double = 19
     private static let agemDuration: Double = 9
 
@@ -63,7 +66,15 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
         let settled = max(elapsed - 2, 0)
 
         let tilt = CGFloat(sin(settled / tiltPeriod * 2 * .pi)) * 0.22
-        let squat = ramp(phase: settled.truncatingRemainder(dividingBy: squatPeriod), length: squatDuration) * 0.45
+        // A quick drop and a long sit. The edge has to be short: `SquatDetector`
+        // lets its standing baseline follow the hips while the player is
+        // upright, so a descent slower than about a second gets absorbed into
+        // the baseline and never reads as a squat at all.
+        let squat = ramp(
+            phase: settled.truncatingRemainder(dividingBy: squatPeriod),
+            length: squatDuration,
+            edge: 0.3
+        ) * 0.45
         let agem = ramp(phase: settled.truncatingRemainder(dividingBy: agemPeriod), length: agemDuration)
 
         func body(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
@@ -109,11 +120,11 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
         )
     }
 
-    /// Rises to 1 over the first fifth of `length`, holds, then falls back to 0.
-    /// Outside `length` it is 0, so the move happens once per period.
-    private static func ramp(phase: Double, length: Double) -> CGFloat {
+    /// Rises to 1 over `edge` seconds, holds, then falls back to 0. Outside
+    /// `length` it is 0, so the move happens once per period.
+    private static func ramp(phase: Double, length: Double, edge: Double? = nil) -> CGFloat {
         guard phase < length else { return 0 }
-        let edge = length * 0.2
+        let edge = edge ?? length * 0.2
         if phase < edge { return CGFloat(phase / edge) }
         if phase > length - edge { return CGFloat((length - phase) / edge) }
         return 1

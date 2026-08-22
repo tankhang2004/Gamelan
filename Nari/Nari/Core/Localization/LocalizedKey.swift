@@ -34,9 +34,7 @@ enum LocalizedKey: String, CaseIterable, Sendable {
 
     // Tutorial
     case tutorialTitle
-    case tutorialStep1
-    case tutorialStep2
-    case tutorialStep3
+    case tutorialSetup
     case tutorialStart
 
     // Calibration
@@ -55,6 +53,7 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case cueFreeze
     case cueHold
     case cueNgayog
+    case cueNgeed
 
     // Event flashes
     case flashNice

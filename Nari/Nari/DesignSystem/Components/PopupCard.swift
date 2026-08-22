@@ -25,10 +25,14 @@ struct PopupCard<Content: View>: View {
                     .padding(.bottom, 34)
             }
             .frame(maxWidth: Theme.Metrics.popupMaxWidth)
-            .painted(
-                TornEdgeShape(seed: paperSeed, roughness: 0.018),
-                fill: Theme.Palette.paper,
-                lineWidth: 6
+            .background(
+                Image("backset")
+                    .resizable()
+                    .scaledToFill()
+            )
+            .overlay(
+                TornEdgeShape(seed: paperSeed, roughness: 0.018)
+                    .stroke(Theme.Palette.ink, lineWidth: 6)
             )
             .shadow(color: Theme.Palette.ink.opacity(0.45), radius: 26, y: 14)
             .padding(.vertical, 40)
@@ -71,7 +75,22 @@ struct PopupActionButtonStyle: ButtonStyle {
             .padding(.horizontal, 34)
             .padding(.vertical, 13)
             .background(Capsule().fill(Theme.Palette.indigo.opacity(configuration.isPressed ? 0.8 : 1)))
-            .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: 3))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
     }
+}
+
+#Preview {
+    ZStack {
+        Image("bg-yellow")
+            .resizable()
+            .scaledToFill()
+
+        PopupCard(title: "", onClose: {}) {
+            VStack(spacing: 20) {
+                Text("Sample popup content")
+                    .font(Theme.Fonts.body(18))
+            }
+        }
+    }
+    .ignoresSafeArea()
 }
