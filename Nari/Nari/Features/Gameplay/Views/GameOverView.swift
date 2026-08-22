@@ -1,12 +1,16 @@
 import SwiftUI
 
-/// The end of a run: the camera dimmed behind a slab of pink paint, the final
-/// score, and the two ways out.
+/// The end of a run: score on the left, a playback of the run on the right,
+/// and the ways to replay, share, or save it. Kept neutral on purpose — this
+/// is a session summary, not a win or lose screen.
 struct GameOverView: View {
     let score: Int
     let survived: String
     let isBest: Bool
+    let bestScore: Int
     let onRetry: () -> Void
+    let onShare: () -> Void
+    let onDownload: () -> Void
     let onMenu: () -> Void
 
     @Environment(\.strings) private var strings
@@ -14,38 +18,27 @@ struct GameOverView: View {
 
     var body: some View {
         ZStack {
-            Theme.Palette.ink.opacity(0.68)
+            Theme.Palette.ink.opacity(0.55)
                 .ignoresSafeArea()
 
-            VStack(spacing: 26) {
-                mark
-
-                VStack(spacing: 4) {
-                    Text("\(score)")
-                        .font(Theme.Fonts.readout(72))
-                        .foregroundStyle(Theme.Palette.cream)
-                    Text("\(strings[.gameOverSurvived]) \(survived)")
-                        .font(Theme.Fonts.body(20))
-                        .foregroundStyle(Theme.Palette.cream.opacity(0.75))
-
-                    if isBest {
-                        Label(strings[.gameOverBest], systemImage: "crown.fill")
-                            .font(Theme.Fonts.label(21))
-                            .foregroundStyle(Theme.Palette.ochre)
-                            .padding(.top, 6)
-                    }
+            VStack {
+                HStack {
+                    Spacer()
+                    PaintedIconButton(symbol: "xmark", diameter: 64, action: onMenu)
                 }
 
-                HStack(spacing: 20) {
-                    Button(strings[.gameOverRetry], action: onRetry)
-                        .buttonStyle(PaintedButtonStyle(height: 76, fontSize: 32))
+                Spacer()
 
-                    Button(strings[.gameplayBack], action: onMenu)
-                        .buttonStyle(.plain)
-                        .font(Theme.Fonts.label(21))
-                        .foregroundStyle(Theme.Palette.cream.opacity(0.85))
+                HStack(alignment: .center, spacing: 48) {
+                    scoreSection
+                    videoPlaybackPlaceholder
                 }
+
+                Spacer()
+
+                actionRow
             }
+            .padding(32)
             .opacity(landed ? 1 : 0)
             .scaleEffect(landed ? 1 : 0.9)
         }
@@ -54,24 +47,83 @@ struct GameOverView: View {
         }
     }
 
-    private var mark: some View {
-        Text(strings[.gameOverTitle])
-            .font(Theme.Fonts.title(96))
-            .foregroundStyle(Theme.Palette.ink)
-            .padding(.horizontal, 90)
-            .padding(.vertical, 40)
-            .background(
-                BrushSwatchShape(seed: 27, roughness: 0.11)
-                    .fill(Theme.Palette.gameOverPink)
+    // MARK: - Score
+
+    private var scoreSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(strings[.gameOverYourScore])
+                .font(Theme.Fonts.title(44))
+                .foregroundStyle(Theme.Palette.indigo)
+
+            Text("\(score)")
+                .font(Theme.Fonts.readout(56))
+                .foregroundStyle(Theme.Palette.ink)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .background(
+                    Image("bg-yellow-2")
+                        .resizable()
+                        .frame(width: 300, height: 120)
+//                    BrushSwatchShape(seed: 27, roughness: 0.08)
+//                        .fill(Theme.Palette.ochre)
+                )
+
+            Text(isBest
+                 ? strings[.gameOverNewHighScore]
+                 : "\(strings[.gameOverBestScoreLabel]) = \(bestScore)")
+                .font(Theme.Fonts.body(18))
+                .foregroundStyle(.white)
+                .padding(.top, 4)
+        }
+    }
+
+    // MARK: - Playback
+
+    /// Stands in for the recorded run until the recording pipeline lands.
+    private var videoPlaybackPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(Theme.Palette.ink.opacity(0.3))
+            .frame(width: 320, height: 240)
+            .overlay(
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.white.opacity(0.85))
             )
-            .rotationEffect(.degrees(-2))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(.white.opacity(0.25), lineWidth: 2)
+            )
+    }
+
+    // MARK: - Actions
+
+    private var actionRow: some View {
+        HStack(spacing: 20) {
+            Button(strings[.gameOverRetry], action: onRetry)
+                .buttonStyle(PaintedButtonStyle(height: 76, fontSize: 30))
+
+            PaintedIconButton(symbol: "square.and.arrow.up", diameter: 64, action: onShare)
+
+            PaintedIconButton(symbol: "arrow.down.circle", diameter: 64, action: onDownload)
+        }
     }
 }
 
 #Preview {
     ZStack {
-        PaintTexture()
-        GameOverView(score: 1342, survived: "01:45", isBest: true, onRetry: {}, onMenu: {})
+        Image("bg-yellow")
+                    .resizable()
+                    .scaledToFill()
+        GameOverView(
+            score: 21983,
+            survived: "01:45",
+            isBest: true,
+            bestScore: 18420,
+            onRetry: {},
+            onShare: {},
+            onDownload: {},
+            onMenu: {}
+        )
     }
     .ignoresSafeArea()
     .environment(\.strings, Localizer(language: .english))

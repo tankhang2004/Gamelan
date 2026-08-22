@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Inspiration behind the game plus thanks to the people and institutions who
-/// helped build it.
+/// Thanks to Mekar Bhuana Centre, the inspiration behind the game.
 struct CreditsPopupView: View {
     let viewModel: CreditsViewModel
     let onClose: () -> Void
@@ -19,7 +18,7 @@ struct CreditsPopupView: View {
                     }
                     .padding(.trailing, 6)
                 }
-                .frame(maxHeight: 360)
+                .frame(maxHeight: 480)
                 // Fades the last visible line so clipped text reads as "keep
                 // scrolling" rather than as a rendering glitch.
                 .mask(
@@ -33,9 +32,6 @@ struct CreditsPopupView: View {
                         endPoint: .bottom
                     )
                 )
-
-                Button(strings[.creditsClose], action: onClose)
-                    .buttonStyle(PopupActionButtonStyle())
             }
         }
     }
@@ -43,13 +39,14 @@ struct CreditsPopupView: View {
     private func sectionView(_ section: CreditSection) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(section.title)
-                .font(Theme.Fonts.label(20))
+                .font(Theme.Fonts.label(30))
                 .foregroundStyle(Theme.Palette.indigoDeep)
 
             ForEach(Array(section.lines.enumerated()), id: \.offset) { _, line in
-                Text(line)
-                    .font(Theme.Fonts.body(16))
+                Text(.init(line))
+                    .font(Theme.Fonts.body(24))
                     .foregroundStyle(Theme.Palette.ink.opacity(0.9))
+                    .tint(Theme.Palette.indigo)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -65,7 +62,6 @@ struct CreditsPopupView: View {
 #Preview {
     let services = AppServices.preview()
     return ZStack {
-        PaintTexture()
         CreditsPopupView(
             viewModel: CreditsViewModel(repository: services.credits, settings: services.settings),
             onClose: {}

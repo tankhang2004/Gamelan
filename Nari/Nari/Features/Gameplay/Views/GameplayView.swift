@@ -259,7 +259,10 @@ struct GameplayView: View {
                 score: viewModel.run.score,
                 survived: viewModel.clockText,
                 isBest: scores.best.map { $0.score <= viewModel.run.score } ?? true,
+                bestScore: scores.best?.score ?? 0,
                 onRetry: { viewModel.retry() },
+                onShare: {},
+                onDownload: {},
                 onMenu: { viewModel.exit() }
             )
 

@@ -50,6 +50,11 @@ struct Localizer: Equatable, Sendable {
         .gameOverRetry: "MAIN LAGI",
         .gameOverSurvived: "Bertahan",
         .gameOverBest: "Rekor baru!",
+        .gameOverYourScore: "Skormu",
+        .gameOverNewHighScore: "Rekor Baru!",
+        .gameOverBestScoreLabel: "Skor terbaik",
+        .gameOverShare: "Bagikan",
+        .gameOverDownload: "Unduh",
 
         .scoresTitle: "Riwayat Skor",
         .scoresEmpty: "Belum ada permainan.\nMain dulu, yuk!",
@@ -61,23 +66,12 @@ struct Localizer: Equatable, Sendable {
         .settingsDone: "Selesai",
 
         .creditsTitle: "Kredit",
-        .creditsInspirationTitle: "Inspirasi",
-        .creditsInspirationBody: """
-        Permainan ini lahir dari latihan tari Bali: agem sebagai sikap dasar, \
-        mendak yang menuntut kaki kuat dan seimbang, serta ngegol yang melatih \
-        kesadaran pinggul dan tubuh bagian tengah. Kami ingin latihan penunjang \
-        itu terasa menyenangkan, bukan menjadi beban tambahan bagi penari muda.
-        """,
-        .creditsTeamTitle: "Tim Pengembang",
-        .creditsMentorsTitle: "Pembimbing & Narasumber",
         .creditsThanksTitle: "Terima Kasih",
         .creditsThanksBody: """
-        Terima kasih kepada para guru tari, sanggar, orang tua, dan penari muda \
-        yang bersedia mencoba, memberi masukan, dan menjaga tradisi ini tetap \
-        hidup. Permainan ini dibuat untuk melengkapi latihan di sanggar, bukan \
-        menggantikannya.
+        Permainan ini terinspirasi oleh Mekar Bhuana Centre, pusat seni dan \
+        budaya Bali yang telah membagikan ilmu dan semangatnya dalam \
+        melestarikan tari Bali. Kunjungi mereka di [mekarbhuana.com](https://mekarbhuana.com).
         """,
-        .creditsClose: "Tutup",
         .gameplayPlayTitle: "Mode Main",
         .gameplayPlaceholderBody: "Layar permainan masih kosong. Alur gerak akan dipasang di sini.",
         .gameplayBack: "Kembali ke Menu",
@@ -136,6 +130,11 @@ struct Localizer: Equatable, Sendable {
         .gameOverRetry: "PLAY AGAIN",
         .gameOverSurvived: "Survived",
         .gameOverBest: "New best!",
+        .gameOverYourScore: "Your Score",
+        .gameOverNewHighScore: "New High Score!",
+        .gameOverBestScoreLabel: "Best score",
+        .gameOverShare: "Share",
+        .gameOverDownload: "Download",
 
         .scoresTitle: "Score History",
         .scoresEmpty: "No runs yet.\nGo dance one!",
@@ -147,22 +146,12 @@ struct Localizer: Equatable, Sendable {
         .settingsDone: "Done",
 
         .creditsTitle: "Credits",
-        .creditsInspirationTitle: "Inspiration",
-        .creditsInspirationBody: """
-        This game grew out of Balinese dance practice: agem as the base stance, \
-        mendak with its demand for strong balanced legs, and ngegol which trains \
-        hip and core awareness. We wanted the supporting exercises to feel like \
-        play rather than one more chore for young dancers.
-        """,
-        .creditsTeamTitle: "Development Team",
-        .creditsMentorsTitle: "Mentors & Advisors",
         .creditsThanksTitle: "Thank You",
         .creditsThanksBody: """
-        Thank you to the dance teachers, sanggar, parents, and young dancers who \
-        tried this out, gave feedback, and keep the tradition alive. The game is \
-        meant to complement practice at the sanggar, never to replace it.
+        This game was inspired by Mekar Bhuana Centre, a Balinese arts and \
+        culture center that generously shared its knowledge and passion for \
+        preserving Balinese dance. Visit them at [mekarbhuana.com](https://mekarbhuana.com).
         """,
-        .creditsClose: "Close",
         .gameplayPlayTitle: "Play Mode",
         .gameplayPlaceholderBody: "The gameplay screen is still empty. Movement flow goes here.",
         .gameplayBack: "Back to Menu",
