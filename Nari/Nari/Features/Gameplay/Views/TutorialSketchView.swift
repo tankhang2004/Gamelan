@@ -1,25 +1,19 @@
 import SwiftUI
 import UIKit
 
-/// The three drawings that explain where to put the iPad and where to stand.
+/// The tutorial step explaining where to put the iPad and where to stand.
 enum TutorialStep: Int, CaseIterable, Identifiable {
-    case placeDevice
-    case stepBack
-    case fullBody
+    case setup
 
     var id: Int { rawValue }
 
     var captionKey: LocalizedKey {
-        switch self {
-        case .placeDevice: .tutorialStep1
-        case .stepBack: .tutorialStep2
-        case .fullBody: .tutorialStep3
-        }
+        .tutorialSetup
     }
 
     /// Image set that replaces the drawn version once artwork is added.
     var artworkName: String {
-        "TutorialStep\(rawValue + 1)"
+        "TutorialStep1"
     }
 }
 
@@ -40,9 +34,7 @@ struct TutorialSketchView: View {
                 sketch.drawRoom()
 
                 switch step {
-                case .placeDevice: sketch.drawPlaceDevice()
-                case .stepBack: sketch.drawStepBack()
-                case .fullBody: sketch.drawFullBody()
+                case .setup: sketch.drawPlaceDevice()
                 }
             }
         }

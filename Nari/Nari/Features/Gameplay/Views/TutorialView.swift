@@ -16,31 +16,33 @@ struct TutorialView: View {
 
     var body: some View {
         ZStack {
-            PaintTexture()
+            Image("bg-yellow")
+                .resizable()
+                .scaledToFill()
+
+//            Color.black.opacity(0.5)
 
             VStack(spacing: 18) {
-                Text(strings[.tutorialTitle])
-                    .font(Theme.Fonts.title(34))
-                    .foregroundStyle(Theme.Palette.indigo)
 
                 page
 
-                Button(strings[.tutorialStart], action: onStart)
-                    .buttonStyle(PaintedButtonStyle(height: 84, fontSize: 34))
+                Button(action: onStart) {
+                    Text(strings[.tutorialStart])
+                        .font(Theme.Fonts.label(34))
+                        .tracking(34 * 0.05)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 84 * 0.55)
+                        .frame(height: 84)
+                        .background(Capsule().fill(Theme.Palette.indigo))
+                }
+                .buttonStyle(.plain)
             }
             .padding(.vertical, 26)
 
             VStack {
                 HStack {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(Theme.Palette.cream)
-                            .padding(16)
-                            .background(Circle().fill(Theme.Palette.indigo))
-                            .overlay(Circle().strokeBorder(Theme.Palette.ink, lineWidth: 4))
-                    }
-                    .buttonStyle(.plain)
+                    PaintedIconButton(symbol: "chevron.left", diameter: 78, action: onBack)
+                        .offset(x: 40)
                     Spacer()
                 }
                 Spacer()
@@ -66,64 +68,31 @@ struct TutorialView: View {
     /// reads as one drawing being redrawn, not as a slideshow.
     private var page: some View {
         VStack(spacing: 10) {
-            ZStack {
-                ForEach(steps) { candidate in
-                    TutorialSketchView(step: candidate)
-                        .opacity(candidate == step ? 1 : 0)
-                }
-            }
-            .frame(maxWidth: 520, maxHeight: .infinity)
+            VideoView(name: "body-tracking-tutorial", fileExtension: "mp4")
+                .aspectRatio(1920 / 1080, contentMode: .fit)
+                .frame(maxWidth: 2000)
+                .cornerRadius(16)
+                .clipped()
 
             ZStack {
                 ForEach(steps) { candidate in
                     Text(strings[candidate.captionKey])
-                        .font(Theme.Fonts.body(19))
+                        .font(Theme.Fonts.body(24))
                         .foregroundStyle(Theme.Palette.pencil)
                         .multilineTextAlignment(.center)
                         .opacity(candidate == step ? 1 : 0)
                 }
             }
-            .frame(height: 58)
+            .frame(height: 100)
             .padding(.horizontal, 24)
-
-            pageDots
         }
         .padding(22)
-        .frame(maxWidth: 620)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Theme.Palette.paper)
-                .shadow(color: Theme.Palette.ink.opacity(0.45), radius: 22, y: 10)
-        )
-        .overlay(tapeStrips)
-        .rotationEffect(.degrees(-0.7))
-    }
-
-    private var pageDots: some View {
-        HStack(spacing: 8) {
-            ForEach(steps) { candidate in
-                Circle()
-                    .fill(candidate == step ? Theme.Palette.pencil : Theme.Palette.pencil.opacity(0.25))
-                    .frame(width: 8, height: 8)
-            }
-        }
-    }
-
-    /// Bits of tape at the corners, the one thing that makes a rectangle read
-    /// as a page stuck into a scrapbook.
-    private var tapeStrips: some View {
-        ZStack {
-            tape.rotationEffect(.degrees(-38)).offset(x: -285, y: -128)
-            tape.rotationEffect(.degrees(34)).offset(x: 285, y: 128)
-        }
-        .allowsHitTesting(false)
-    }
-
-    private var tape: some View {
-        Rectangle()
-            .fill(Theme.Palette.ochre.opacity(0.55))
-            .frame(width: 84, height: 26)
-            .overlay(Rectangle().strokeBorder(Color.white.opacity(0.35), lineWidth: 1))
+        .frame(maxWidth: 800)
+//        .background(
+//            Image("backset")
+//                .resizable()
+//                .scaledToFill().cornerRadius(16)
+//        )
     }
 }
 

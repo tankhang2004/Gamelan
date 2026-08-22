@@ -38,6 +38,7 @@ struct MainMenuView: View {
                         popupLayer
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
+            .onTapGesture { viewModel.play() }
         }
         .ignoresSafeArea()
         .task { viewModel.onAppear() }
@@ -61,16 +62,13 @@ struct MainMenuView: View {
 
             HStack {
                 Spacer(minLength: 0)
-                Button(strings[.menuPlay]) { viewModel.play() }
-                    .buttonStyle(
-                        PaintedButtonStyle(
-                            height: layout.playButtonHeight,
-                            fontSize: layout.scaled(46)
-                        )
-                    )
+                Text("Tap to Start")
+                    .font(.system(size: layout.scaled(46), weight: .bold, design: .rounded))
+                    .foregroundStyle(.indigo)
                     .opacity(viewModel.isContentVisible ? 1 : 0)
-                    .offset(y: viewModel.isContentVisible ? 0 : 50)
+                    .offset(x: -50, y:0)
                     .animation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.12), value: viewModel.isContentVisible)
+                    .modifier(BlinkingModifier())
             }
         }
         .padding(.horizontal, layout.horizontalPadding)
@@ -92,6 +90,7 @@ struct MainMenuView: View {
                 )
             }
         }
+        .offset(x:-24)
     }
 
     // MARK: - Popups
@@ -120,6 +119,17 @@ struct MainMenuView: View {
         case nil:
             EmptyView()
         }
+    }
+}
+
+struct BlinkingModifier: ViewModifier {
+    @State private var isBlinking = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isBlinking ? 0.4 : 1)
+            .animation(.easeInOut(duration: 0.8).repeatForever(), value: isBlinking)
+            .onAppear { isBlinking = true }
     }
 }
 
