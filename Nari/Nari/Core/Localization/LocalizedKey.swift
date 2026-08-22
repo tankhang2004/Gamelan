@@ -19,13 +19,8 @@ enum LocalizedKey: String, CaseIterable, Sendable {
 
     // Credits popup
     case creditsTitle
-    case creditsInspirationTitle
-    case creditsInspirationBody
-    case creditsTeamTitle
-    case creditsMentorsTitle
     case creditsThanksTitle
     case creditsThanksBody
-    case creditsClose
 
     // Gameplay
     case gameplayPlayTitle
@@ -67,6 +62,11 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case gameOverRetry
     case gameOverSurvived
     case gameOverBest
+    case gameOverYourScore
+    case gameOverNewHighScore
+    case gameOverBestScoreLabel
+    case gameOverShare
+    case gameOverDownload
 
     // Score history
     case scoresTitle

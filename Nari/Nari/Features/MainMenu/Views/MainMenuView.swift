@@ -22,11 +22,11 @@ struct MainMenuView: View {
                 Image("dancer")
                     .resizable()
                     .scaledToFit()
-                    .offset(x:60)
+                    .offset(x:60, y:30)
                     .frame(height: layout.dancerHeight)
                             .opacity(viewModel.isContentVisible ? 1 : 0)
                             .scaleEffect(
-                                viewModel.isContentVisible ? 1.5 : 0.96,
+                                viewModel.isContentVisible ? 1.4 : 0.96,
                                 anchor: .center
                             )
                             .animation(
@@ -50,7 +50,7 @@ struct MainMenuView: View {
         VStack(spacing: 0) {
             HStack(alignment: .top) {
                 GameTitleView(layout: layout)
-                    .offset(x: viewModel.isContentVisible ? 20 : -70, y:viewModel.isContentVisible ? 540 : 50)
+                    .offset(x: viewModel.isContentVisible ? 20 : -70, y:viewModel.isContentVisible ? 60 : 50)
                     .animation(.spring(response: 0.6, dampingFraction: 0.82), value: viewModel.isContentVisible)
 
                 Spacer(minLength: 0)

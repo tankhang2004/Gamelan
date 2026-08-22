@@ -49,7 +49,7 @@ struct ScoreHistoryPopupView: View {
             if isBest {
                 Image(systemName: "crown.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(Theme.Palette.cueOrange)
+                    .foregroundStyle(.black)
             }
 
             VStack(alignment: .leading, spacing: 2) {

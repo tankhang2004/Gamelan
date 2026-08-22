@@ -16,52 +16,49 @@ struct PopupCard<Content: View>: View {
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onClose)
+                .transition(.opacity.animation(.easeOut(duration: 0.22)))
 
             VStack(spacing: 0) {
                 header
                 content()
-                    .padding(.horizontal, 36)
+                    .padding(.horizontal, 44)
                     .padding(.top, 22)
                     .padding(.bottom, 34)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-            .frame(maxWidth: Theme.Metrics.popupMaxWidth)
+            .frame(maxWidth: Theme.Metrics.popupMaxWidth, maxHeight: Theme.Metrics.popupMaxHeight)
             .background(
                 Image("backset")
                     .resizable()
                     .scaledToFill()
             )
-            .overlay(
-                TornEdgeShape(seed: paperSeed, roughness: 0.018)
-                    .stroke(Theme.Palette.ink, lineWidth: 6)
-            )
             .shadow(color: Theme.Palette.ink.opacity(0.45), radius: 26, y: 14)
             .padding(.vertical, 40)
+            .transition(.opacity.combined(with: .scale(scale: 0.94)))
         }
-        .transition(.opacity.combined(with: .scale(scale: 0.94)))
     }
 
     private var header: some View {
         ZStack {
-            Theme.Palette.indigo
-
             Text(title)
-                .font(Theme.Fonts.title(30))
-                .foregroundStyle(Theme.Palette.cream)
+                .font(Theme.Fonts.title(64))
+                .foregroundStyle(Theme.Palette.ink)
 
             HStack {
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Theme.Palette.cream)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(Theme.Palette.ink)
                         .padding(12)
-                        .background(Circle().fill(Theme.Palette.ink.opacity(0.3)))
+                        .background(Circle().fill(Theme.Palette.ink.opacity(0.12)))
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 20)
             }
         }
         .frame(height: 78)
+        .padding(.top, 54)
     }
 }
 
@@ -70,7 +67,7 @@ struct PopupCard<Content: View>: View {
 struct PopupActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(Theme.Fonts.label(20))
+            .font(Theme.Fonts.label(32))
             .foregroundStyle(Theme.Palette.cream)
             .padding(.horizontal, 34)
             .padding(.vertical, 13)
@@ -85,7 +82,7 @@ struct PopupActionButtonStyle: ButtonStyle {
             .resizable()
             .scaledToFill()
 
-        PopupCard(title: "", onClose: {}) {
+        PopupCard(title: "Settings", onClose: {}) {
             VStack(spacing: 20) {
                 Text("Sample popup content")
                     .font(Theme.Fonts.body(18))

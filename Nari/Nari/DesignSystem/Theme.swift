@@ -56,7 +56,8 @@ enum Theme {
         static let referenceStageHeight: CGFloat = 834
         static let screenPadding: CGFloat = 48
         static let popupCornerRadius: CGFloat = 28
-        static let popupMaxWidth: CGFloat = 620
+        static let popupMaxWidth: CGFloat = 860
+        static let popupMaxHeight: CGFloat = 700
         /// Width of the ink outline drawn round painted shapes, at reference size.
         static let inkStroke: CGFloat = 5
     }

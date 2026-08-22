@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Shown right after the curtains open: a scrapbook page whose drawing changes
-/// every second, explaining where to put the iPad and where to stand.
+/// Shown right after the curtains open: a video walkthrough explaining where
+/// to put the iPad and where to stand.
 struct TutorialView: View {
     let onStart: () -> Void
     let onBack: () -> Void
@@ -16,15 +16,34 @@ struct TutorialView: View {
 
     var body: some View {
         ZStack {
-            Image("bg-yellow")
-                .resizable()
-                .scaledToFill()
-
-//            Color.black.opacity(0.5)
+            // Stands in for the live camera mirror until the recording
+            // pipeline lands — swap for CameraPreviewView then.
+            Theme.Palette.ink
+                .overlay(Color.black.opacity(0.5))
 
             VStack(spacing: 18) {
 
-                page
+                VideoView(name: "body-tracking-tutorial", fileExtension: "mp4")
+                    .aspectRatio(1920 / 1080, contentMode: .fit)
+                    .frame(maxWidth: 1000)
+                    .cornerRadius(24)
+                    .clipped()
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .strokeBorder(Theme.Palette.ochre, lineWidth: 16)
+                    )
+
+                ZStack {
+                    ForEach(steps) { candidate in
+                        Text(strings[candidate.captionKey])
+                            .font(Theme.Fonts.body(32))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .opacity(candidate == step ? 1 : 0)
+                    }
+                }
+                .frame(height: 100)
+                .padding(.horizontal, 24)
 
                 Button(action: onStart) {
                     Text(strings[.tutorialStart])
@@ -32,17 +51,17 @@ struct TutorialView: View {
                         .tracking(34 * 0.05)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 84 * 0.55)
-                        .frame(height: 84)
+                        .frame(height: 72)
                         .background(Capsule().fill(Theme.Palette.indigo))
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.vertical, 26)
+            .padding(.top,50)
 
             VStack {
                 HStack {
                     PaintedIconButton(symbol: "chevron.left", diameter: 78, action: onBack)
-                        .offset(x: 40)
+                        .offset(x: 40, y:24)
                     Spacer()
                 }
                 Spacer()
@@ -62,37 +81,6 @@ struct TutorialView: View {
             onStart()
             #endif
         }
-    }
-
-    /// The paper card. Frames are crossfaded rather than swapped so the change
-    /// reads as one drawing being redrawn, not as a slideshow.
-    private var page: some View {
-        VStack(spacing: 10) {
-            VideoView(name: "body-tracking-tutorial", fileExtension: "mp4")
-                .aspectRatio(1920 / 1080, contentMode: .fit)
-                .frame(maxWidth: 2000)
-                .cornerRadius(16)
-                .clipped()
-
-            ZStack {
-                ForEach(steps) { candidate in
-                    Text(strings[candidate.captionKey])
-                        .font(Theme.Fonts.body(24))
-                        .foregroundStyle(Theme.Palette.pencil)
-                        .multilineTextAlignment(.center)
-                        .opacity(candidate == step ? 1 : 0)
-                }
-            }
-            .frame(height: 100)
-            .padding(.horizontal, 24)
-        }
-        .padding(22)
-        .frame(maxWidth: 800)
-//        .background(
-//            Image("backset")
-//                .resizable()
-//                .scaledToFill().cornerRadius(16)
-//        )
     }
 }
 
