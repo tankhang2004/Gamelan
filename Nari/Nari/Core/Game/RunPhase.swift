@@ -15,10 +15,13 @@ enum AgemSide: String, CaseIterable, Sendable {
 /// Everything funnels back through `ngayog`, and every branch ends by checking
 /// Taksu — that check is what makes four flows one loop.
 enum RunPhase: Equatable, Sendable {
-    /// The default state: walking with a steady left-right head tilt.
+    /// The default state: walking with a steady left-right head tilt, and the
+    /// only phase in which coins are on the floor.
     case ngayog
     /// A squat has been asked for and the window is open.
     case squatCue(remaining: Double)
+    /// The squat landed and now has to be held while the wave passes over.
+    case squatHold(elapsed: Double)
     /// A freeze has been asked for; the player is getting into the pose.
     case freezeGrace(side: AgemSide, remaining: Double)
     /// The pose locked in and is being held.
@@ -28,7 +31,7 @@ enum RunPhase: Equatable, Sendable {
     var isInterrupt: Bool {
         switch self {
         case .ngayog, .gameOver: false
-        case .squatCue, .freezeGrace, .freezeHold: true
+        case .squatCue, .squatHold, .freezeGrace, .freezeHold: true
         }
     }
 
@@ -36,7 +39,7 @@ enum RunPhase: Equatable, Sendable {
     var cuedSide: AgemSide? {
         switch self {
         case .freezeGrace(let side, _), .freezeHold(let side, _): side
-        case .ngayog, .squatCue, .gameOver: nil
+        case .ngayog, .squatCue, .squatHold, .gameOver: nil
         }
     }
 }
@@ -45,9 +48,14 @@ enum RunPhase: Equatable, Sendable {
 /// layer can play the right cue. Purely a report — no state lives here.
 enum RunEvent: Equatable, Sendable {
     case ngayogCycle
+    /// A coin was swept up during the walk, worth this many points.
+    case coinCollected(value: Int)
     case squatCued
     case squatHit
     case squatMissed
+    /// Stood up before the wave had passed.
+    case squatBrokenEarly
+    case squatHeldFully
     case freezeCued(AgemSide)
     case freezeLocked
     case freezeHeldFully
