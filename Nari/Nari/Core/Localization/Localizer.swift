@@ -37,6 +37,7 @@ struct Localizer: Equatable, Sendable {
         .cueFreeze: "DIAM!",
         .cueHold: "TAHAN",
         .cueNgayog: "Ngayog",
+        .cueNgeed: "Nge'ed",
 
         .flashNice: "MANTAP!",
         .flashMissed: "LEWAT",
@@ -116,6 +117,7 @@ struct Localizer: Equatable, Sendable {
         .cueFreeze: "FREEZE!",
         .cueHold: "HOLD",
         .cueNgayog: "Ngayog",
+        .cueNgeed: "Nge'ed",
 
         .flashNice: "NICE!",
         .flashMissed: "MISSED",

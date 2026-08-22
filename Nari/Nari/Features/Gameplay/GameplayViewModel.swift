@@ -101,6 +101,34 @@ final class GameplayViewModel {
         run.phase.cuedSide.map { poses.pose(for: $0) }
     }
 
+    /// True from the squat cue through to the end of its hold, so the reference
+    /// card shows the nge'ed drawing instead of the ngayog one for the whole
+    /// move rather than only while the player is on their way down.
+    var isSquatCued: Bool {
+        switch run.phase {
+        case .squatCue, .squatHold: true
+        default: false
+        }
+    }
+
+    /// Where each coin currently sits on the camera picture.
+    ///
+    /// The engine keeps coins in body space so they follow the player around;
+    /// this puts them back into image coordinates for the view, which is the
+    /// same trip a pose marker makes.
+    var coinPlacements: [CoinPlacement] {
+        guard let frame = tracker.bodyFrame else { return [] }
+        return run.coinField.coins.map { coin in
+            CoinPlacement(
+                id: coin.id,
+                value: coin.value,
+                center: frame.denormalize(coin.position),
+                radius: coin.radius * frame.torsoLength,
+                remainingFraction: coin.remainingFraction
+            )
+        }
+    }
+
     var clockText: String { RunClock.text(for: run.elapsed) }
 
     // MARK: - Session control
@@ -245,9 +273,12 @@ final class GameplayViewModel {
     private func react(to event: RunEvent) {
         switch event {
         case .ngayogCycle: audio.play(.ngayogCycle)
+        case .coinCollected: audio.play(.coinCollected)
         case .squatCued: audio.play(.squatCue)
         case .squatHit: audio.play(.squatHit)
         case .squatMissed: audio.play(.squatMiss)
+        case .squatBrokenEarly: audio.play(.squatBroken)
+        case .squatHeldFully: audio.play(.squatHeld)
         case .freezeCued: audio.play(.freezeCue)
         case .freezeLocked: audio.play(.freezeLocked)
         case .freezeHeldFully: audio.play(.freezeHeld)
@@ -260,9 +291,13 @@ final class GameplayViewModel {
             phase = .gameOver
         }
 
-        // A ngayog tick fires constantly and would drown out everything else on
-        // screen, so it is heard but never flashed.
-        guard event != .ngayogCycle else { return }
+        // A ngayog tick and a coin both fire constantly and would drown out
+        // everything else on screen, so they are heard but never flashed. The
+        // coin has its own feedback where it was picked up.
+        switch event {
+        case .ngayogCycle, .coinCollected: return
+        default: break
+        }
         lastEvent = event
         lastEventAt = .now
     }

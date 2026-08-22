@@ -12,6 +12,9 @@ struct MotionTracker {
 
     /// Markers for whichever pose is currently cued, empty the rest of the time.
     private(set) var markers: [PoseEvaluation.Marker] = []
+    /// The most recent reading of where the player is, kept so the view can put
+    /// a coin back onto the camera picture in the place the engine put it.
+    private(set) var bodyFrame: BodyFrame?
     /// How many of the nine points are in place, for the "3 of 9" style readout.
     private(set) var matchedPointCount = 0
 
@@ -30,6 +33,14 @@ struct MotionTracker {
 
         squat.update(snapshot, delta: delta)
         input.isSquatting = squat.isSquatting
+
+        let frame = BodyFrame(snapshot: snapshot)
+        bodyFrame = frame
+        if let frame {
+            input.handPositions = [BodyJoint.leftWrist, .rightWrist].compactMap { joint in
+                snapshot.position(of: joint).map(frame.normalize)
+            }
+        }
 
         guard let cuedPose else {
             markers = []
@@ -51,5 +62,6 @@ struct MotionTracker {
         squat.reset()
         markers = []
         matchedPointCount = 0
+        bodyFrame = nil
     }
 }

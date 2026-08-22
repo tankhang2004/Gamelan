@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 
@@ -11,6 +12,9 @@ struct RunInput: Sendable {
     var isSquatting = false
     /// All nine tracked points are inside the cued pose right now.
     var matchesCuedPose = false
+    /// Both wrists in body space, for sweeping up coins. Empty when the body
+    /// cannot be read this frame.
+    var handPositions: [CGPoint] = []
 
     static let idle = RunInput()
 }
@@ -26,6 +30,8 @@ struct RunInput: Sendable {
 final class RunEngine {
 
     private(set) var phase: RunPhase = .ngayog
+    /// The coins currently on the floor. Only ever non-empty during `ngayog`.
+    private(set) var coinField = CoinField()
     private(set) var energy: Double
     private(set) var score: Int = 0
     /// Seconds survived, which drives both the on-screen timer and the ramp.
@@ -35,9 +41,10 @@ final class RunEngine {
     /// running out, the grace period running out, or the hold filling up.
     var phaseProgress: Double {
         switch phase {
-        case .squatCue(let remaining): 1 - remaining / rules.squatWindow
+        case .squatCue(let remaining): 1 - remaining / rules.squatGracePeriod
+        case .squatHold(let held): holdTotal > 0 ? held / holdTotal : 0
         case .freezeGrace(_, let remaining): 1 - remaining / rules.freezeGracePeriod
-        case .freezeHold(_, let held): held / rules.freezeHoldDuration
+        case .freezeHold(_, let held): holdTotal > 0 ? held / holdTotal : 0
         case .ngayog, .gameOver: 0
         }
     }
@@ -59,6 +66,9 @@ final class RunEngine {
     /// here so a 7-second hold does not lose a point per second to rounding.
     @ObservationIgnored private var scoreFraction: Double = 0
     @ObservationIgnored private var hasWarnedLowEnergy = false
+    /// How long the hold in progress runs for. Drawn fresh at every cue, so a
+    /// player cannot learn one rhythm and stop watching.
+    @ObservationIgnored private var holdTotal: Double = 0
 
     init(rules: RunRules = .default, seed: UInt64 = .random(in: UInt64.min...UInt64.max)) {
         self.rules = rules
@@ -87,6 +97,8 @@ final class RunEngine {
             advanceNgayog(delta: delta, input: input, events: &events)
         case .squatCue(let remaining):
             advanceSquatCue(remaining: remaining, delta: delta, input: input, events: &events)
+        case .squatHold(let held):
+            advanceSquatHold(held: held, delta: delta, input: input, events: &events)
         case .freezeGrace(let side, let remaining):
             advanceFreezeGrace(side: side, remaining: remaining, delta: delta, input: input, events: &events)
         case .freezeHold(let side, let held):
@@ -109,6 +121,16 @@ final class RunEngine {
             events.append(.ngayogCycle)
         }
 
+        for value in coinField.advance(
+            delta: delta,
+            hands: input.handPositions,
+            rules: rules,
+            generator: &generator
+        ) {
+            score += value
+            events.append(.coinCollected(value: value))
+        }
+
         timeToNextInterrupt -= delta
         guard timeToNextInterrupt <= 0 else { return }
 
@@ -116,12 +138,14 @@ final class RunEngine {
         // rather than re-rolled into a squat that was never drawn.
         let rolledFreeze = Double.random(in: 0..<1, using: &generator) < freezeChance
 
+        coinField.clear()
+
         if rolledFreeze, elapsed >= rules.freezeLockout {
             let side = AgemSide.allCases.randomElement(using: &generator) ?? .kanan
             phase = .freezeGrace(side: side, remaining: rules.freezeGracePeriod)
             events.append(.freezeCued(side))
         } else {
-            phase = .squatCue(remaining: rules.squatWindow)
+            phase = .squatCue(remaining: rules.squatGracePeriod)
             events.append(.squatCued)
         }
     }
@@ -136,7 +160,8 @@ final class RunEngine {
             change(energy: rules.squatHitEnergy)
             score += rules.squatHitScore
             events.append(.squatHit)
-            returnToNgayog()
+            holdTotal = Double.random(in: rules.squatHoldDuration, using: &generator)
+            phase = .squatHold(elapsed: 0)
             return
         }
 
@@ -150,6 +175,31 @@ final class RunEngine {
         }
     }
 
+    /// Down in the nge'ed with the wave coming over. Nothing to do but stay
+    /// low: standing early is what the wave is there to punish.
+    private func advanceSquatHold(
+        held: Double,
+        delta: Double,
+        input: RunInput,
+        events: inout [RunEvent]
+    ) {
+        guard input.isSquatting else {
+            change(energy: rules.squatBreakEnergy)
+            events.append(.squatBrokenEarly)
+            returnToNgayog()
+            return
+        }
+
+        let total = held + delta
+        if total >= holdTotal {
+            score += rules.squatHoldScore
+            events.append(.squatHeldFully)
+            returnToNgayog()
+        } else {
+            phase = .squatHold(elapsed: total)
+        }
+    }
+
     private func advanceFreezeGrace(
         side: AgemSide,
         remaining: Double,
@@ -158,6 +208,7 @@ final class RunEngine {
         events: inout [RunEvent]
     ) {
         if input.matchesCuedPose {
+            holdTotal = Double.random(in: rules.freezeHoldDuration, using: &generator)
             phase = .freezeHold(side: side, elapsed: 0)
             scoreFraction = 0
             events.append(.freezeLocked)
@@ -201,7 +252,7 @@ final class RunEngine {
         scoreFraction -= whole
 
         let total = held + delta
-        if total >= rules.freezeHoldDuration {
+        if total >= holdTotal {
             events.append(.freezeHeldFully)
             returnToNgayog()
         } else {
@@ -212,6 +263,8 @@ final class RunEngine {
     private func returnToNgayog() {
         phase = .ngayog
         scoreFraction = 0
+        holdTotal = 0
+        coinField.clear()
         scheduleNextInterrupt()
     }
 

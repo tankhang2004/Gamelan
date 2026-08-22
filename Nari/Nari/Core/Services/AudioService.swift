@@ -10,9 +10,14 @@ enum SoundEffect: String, Sendable {
     case calibrationComplete
 
     case ngayogCycle
+    /// A coin swept up during the walk.
+    case coinCollected
     case squatCue
     case squatHit
     case squatMiss
+    /// Stood up while the wave was still passing.
+    case squatBroken
+    case squatHeld
     /// The gong that marks the music cutting out for a Freeze.
     case freezeCue
     /// The pose locked in and the hold began.

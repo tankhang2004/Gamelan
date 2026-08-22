@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import CoreGraphics
 import Foundation
+import OSLog
 import UIKit
 import Vision
 
@@ -26,6 +27,14 @@ final class CameraBodyPoseService: NSObject, BodyPoseSource, @unchecked Sendable
     private weak var previewLayer: AVCaptureVideoPreviewLayer?
     private var orientationObserver: NSObjectProtocol?
     private var isConfigured = false
+
+    /// Knows where the front camera physically sits on this iPad. Only ever
+    /// read to work out `cameraMountingOffset`; see `updateMountingOffset()`.
+    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+    /// Degrees to add to the interface angle on this particular device, once
+    /// it has been possible to measure it. Nil means "not measured yet", which
+    /// falls back to assuming the camera is on the portrait edge.
+    private var cameraMountingOffset: CGFloat?
 
     var captureSession: AVCaptureSession? { session }
 
@@ -110,8 +119,10 @@ final class CameraBodyPoseService: NSObject, BodyPoseSource, @unchecked Sendable
             connection.isVideoMirrored = false
         }
 
-        await applyCurrentRotation()
+        rotationCoordinator = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: nil)
+
         await observeOrientationChanges()
+        await applyCurrentRotation()
         isConfigured = true
     }
 
@@ -121,17 +132,22 @@ final class CameraBodyPoseService: NSObject, BodyPoseSource, @unchecked Sendable
     @MainActor
     func attachPreview(_ layer: AVCaptureVideoPreviewLayer) {
         previewLayer = layer
-        applyRotation(Self.rotationAngle(for: Self.interfaceOrientation()))
+        applyRotation(uprightAngle())
     }
 
     @MainActor
     private func applyCurrentRotation() async {
-        applyRotation(Self.rotationAngle(for: Self.interfaceOrientation()))
+        applyRotation(uprightAngle())
     }
 
     @MainActor
     private func observeOrientationChanges() async {
         guard orientationObserver == nil else { return }
+
+        // Without this `UIDevice.current.orientation` stays `.unknown` and the
+        // notification below never fires at all.
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+
         orientationObserver = NotificationCenter.default.addObserver(
             forName: UIDevice.orientationDidChangeNotification,
             object: nil,
@@ -139,7 +155,7 @@ final class CameraBodyPoseService: NSObject, BodyPoseSource, @unchecked Sendable
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.applyRotation(Self.rotationAngle(for: Self.interfaceOrientation()))
+                self.applyRotation(self.uprightAngle())
             }
         }
     }
@@ -168,14 +184,61 @@ final class CameraBodyPoseService: NSObject, BodyPoseSource, @unchecked Sendable
         return scene?.interfaceOrientation ?? .landscapeRight
     }
 
-    /// Angle that makes the camera upright for a given interface orientation.
+    /// The angle that makes the camera upright right now: where the interface
+    /// is pointing, plus wherever this iPad happens to keep its front camera.
+    @MainActor
+    private func uprightAngle() -> CGFloat {
+        updateMountingOffset()
+
+        let base = Self.baseRotationAngle(for: Self.interfaceOrientation())
+        let angle = base + (cameraMountingOffset ?? 0)
+        return angle.truncatingRemainder(dividingBy: 360)
+    }
+
+    /// Measures how far this device's camera is turned relative to the
+    /// portrait-edge mounting `baseRotationAngle` assumes.
+    ///
+    /// Apple has moved the front camera between the short edge and the long
+    /// edge across the iPad line, so one hardcoded table cannot be upright on
+    /// every device — an iPad Air and a recent iPad Pro need angles a quarter
+    /// turn apart for the same interface orientation.
+    ///
+    /// `RotationCoordinator` knows the difference, but it derives its answer
+    /// from gravity, and an iPad lying flat on the floor — which is how this
+    /// game is played — has no gravity vector to read. So it is sampled only
+    /// while the device is being held somewhere it can actually resolve, and
+    /// the result is kept as a constant of the hardware. Everything after that
+    /// is computed from the interface alone, which is the one thing a device
+    /// flat on the floor still knows.
+    @MainActor
+    private func updateMountingOffset() {
+        guard let rotationCoordinator else { return }
+
+        // While the interface is locked to landscape the device can be held in
+        // portrait, and then the two disagree and the difference is not the
+        // mounting. Only a frame where they agree measures the hardware.
+        let interface = Self.interfaceOrientation()
+        guard UIDevice.current.orientation.matches(interface) else { return }
+
+        let measured = rotationCoordinator.videoRotationAngleForHorizonLevelPreview
+        let base = Self.baseRotationAngle(for: interface)
+        let offset = (measured - base).truncatingRemainder(dividingBy: 360)
+        let normalized = offset < 0 ? offset + 360 : offset
+
+        guard normalized != cameraMountingOffset else { return }
+        cameraMountingOffset = normalized
+        Logger.camera.info("Front camera mounting offset \(normalized, privacy: .public)deg (AVFoundation \(measured, privacy: .public)deg, interface \(base, privacy: .public)deg).")
+    }
+
+    /// Angle that makes the camera upright for a given interface orientation,
+    /// on a device whose front camera sits on the portrait edge.
     ///
     /// This reads the interface rather than gravity on purpose. The game asks
     /// the player to lay the iPad down on the floor, and a device lying flat
     /// cannot tell the accelerometer which way is up — which is what left the
     /// preview a quarter turn out. The interface is locked to landscape, so it
-    /// always knows.
-    private static func rotationAngle(for orientation: UIInterfaceOrientation) -> CGFloat {
+    /// always knows. `updateMountingOffset()` corrects for the hardware.
+    private static func baseRotationAngle(for orientation: UIInterfaceOrientation) -> CGFloat {
         switch orientation {
         case .portrait: 90
         case .portraitUpsideDown: 270
@@ -239,6 +302,24 @@ extension CameraBodyPoseService: AVCaptureVideoDataOutputSampleBufferDelegate {
             )
         }
         return result
+    }
+}
+
+extension Logger {
+    static let camera = Logger(subsystem: "com.yuknari.Nari", category: "camera")
+}
+
+/// `UIDeviceOrientation` and `UIInterfaceOrientation` name the two landscapes
+/// the opposite way round: turning the device left turns the interface right.
+private extension UIDeviceOrientation {
+    func matches(_ interface: UIInterfaceOrientation) -> Bool {
+        switch self {
+        case .portrait: interface == .portrait
+        case .portraitUpsideDown: interface == .portraitUpsideDown
+        case .landscapeLeft: interface == .landscapeRight
+        case .landscapeRight: interface == .landscapeLeft
+        default: false
+        }
     }
 }
 

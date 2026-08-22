@@ -36,6 +36,10 @@ struct GameplayView: View {
         ZStack {
             cameraArea
 
+            // Over the player but under the HUD: the wave is scenery, and the
+            // score and the hold timer have to stay readable through it.
+            squatWave
+
             if viewModel.phase == .playing {
                 hud
                     .transition(.opacity)
@@ -61,15 +65,18 @@ struct GameplayView: View {
                     simulatorStandIn
                 }
 
+                let mapper = CameraFrameMapper(
+                    imageSize: viewModel.imageSize,
+                    viewSize: proxy.size,
+                    isMirrored: viewModel.isPreviewMirrored
+                )
+
+                if viewModel.phase == .playing {
+                    CoinsView(placements: viewModel.coinPlacements, mapper: mapper)
+                }
+
                 if viewModel.run.phase.cuedSide != nil {
-                    PoseMarkersView(
-                        markers: viewModel.tracker.markers,
-                        mapper: CameraFrameMapper(
-                            imageSize: viewModel.imageSize,
-                            viewSize: proxy.size,
-                            isMirrored: viewModel.isPreviewMirrored
-                        )
-                    )
+                    PoseMarkersView(markers: viewModel.tracker.markers, mapper: mapper)
                 }
             }
         }
@@ -157,12 +164,27 @@ struct GameplayView: View {
                 symbolName: "figure.stand"
             )
             .transition(.move(edge: .trailing).combined(with: .opacity))
+        } else if viewModel.isSquatCued {
+            PoseCueCard(
+                title: strings[.cueNgeed],
+                artworkName: "PoseNgeed",
+                symbolName: "figure.cooldown"
+            )
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         } else {
             PoseCueCard(
                 title: strings[.cueNgayog],
                 artworkName: "PoseNgayog",
                 symbolName: "figure.walk"
             )
+        }
+    }
+
+    /// The wave the player has to stay under for the length of a nge'ed hold.
+    @ViewBuilder
+    private var squatWave: some View {
+        if case .squatHold = viewModel.run.phase {
+            SquatWaveView(progress: viewModel.run.phaseProgress)
         }
     }
 
@@ -174,6 +196,8 @@ struct GameplayView: View {
                 CuePromptView(text: strings[.cueWalk], progress: 0, tint: Theme.Palette.indigo)
             case .squatCue:
                 CuePromptView(text: strings[.cueSquat], progress: run.phaseProgress, tint: Theme.Palette.cueOrange)
+            case .squatHold:
+                CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect)
             case .freezeGrace:
                 CuePromptView(text: strings[.cueFreeze], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink)
             case .freezeHold:
@@ -295,11 +319,13 @@ struct GameplayView: View {
         switch event {
         case .squatHit: (strings[.flashNice], Theme.Palette.poseCorrect)
         case .squatMissed: (strings[.flashMissed], Theme.Palette.poseWrong)
+        case .squatHeldFully: (strings[.flashPerfect], Theme.Palette.ochre)
+        case .squatBrokenEarly: (strings[.flashBroke], Theme.Palette.cream)
         case .freezeLocked: (strings[.flashLocked], Theme.Palette.poseCorrect)
         case .freezeHeldFully: (strings[.flashPerfect], Theme.Palette.ochre)
         case .freezeBrokenEarly: (strings[.flashBroke], Theme.Palette.cream)
         case .freezeFailed: (strings[.flashTooSlow], Theme.Palette.poseWrong)
-        case .ngayogCycle, .squatCued, .freezeCued, .energyLow, .gameOver: nil
+        case .ngayogCycle, .coinCollected, .squatCued, .freezeCued, .energyLow, .gameOver: nil
         }
     }
 
