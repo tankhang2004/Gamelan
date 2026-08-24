@@ -477,6 +477,7 @@ struct GameplayView: View {
             source: SimulatedBodyPoseSource(),
             audio: services.audio,
             scores: services.scores,
+            gameCenter: services.gameCenter,
             onExit: {}
         ),
         scores: services.scores

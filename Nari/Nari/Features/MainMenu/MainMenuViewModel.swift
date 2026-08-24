@@ -38,7 +38,7 @@ final class MainMenuViewModel {
     func onAppear() {
         guard !hasPlayedEntrance else { return }
         hasPlayedEntrance = true
-        audio.startBackgroundMusic()
+        audio.startBackgroundMusic(.menu)
 
         choreography = Task { [weak self] in
             try? await Task.sleep(for: .seconds(0.15))

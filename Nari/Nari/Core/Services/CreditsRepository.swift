@@ -15,6 +15,17 @@ struct StaticCreditsRepository: CreditsProviding {
                 lines: [strings[.creditsAboutBody]]
             ),
             CreditSection(
+                id: "howToPlay",
+                title: strings[.creditsHowToPlayTitle],
+                lines: [
+                    strings[.creditsHowToPlayStep1],
+                    strings[.creditsHowToPlayStep2],
+                    strings[.creditsHowToPlayStep3],
+                    strings[.creditsHowToPlayStep4],
+                    strings[.creditsHowToPlayStep5],
+                ]
+            ),
+            CreditSection(
                 id: "credits",
                 title: strings[.creditsCreditsTitle],
                 lines: [strings[.creditsCreditsBody]]

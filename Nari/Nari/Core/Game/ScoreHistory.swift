@@ -66,3 +66,12 @@ final class InMemoryScoreHistoryStore: ScoreHistoryStoring {
         records.insert(record, at: 0)
     }
 }
+
+/// Formats a run length as mm:ss. Shared by the HUD timer and the score
+/// history list so a run reads the same in both places.
+enum RunClock {
+    static func text(for seconds: Double) -> String {
+        let total = Int(seconds.rounded(.down))
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+}

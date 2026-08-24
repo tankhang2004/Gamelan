@@ -25,7 +25,7 @@ struct Localizer: Equatable, Sendable {
     private static let indonesian: [LocalizedKey: String] = [
         .menuPlay: "MULAI",
         .menuSettings: "PENGATURAN",
-        .menuCredits: "INFO",
+        .menuCredits: "INFORMASI",
         .menuScores: "SKOR",
         .tagline: "Latihan tubuh untuk penari Bali cilik",
 
@@ -60,8 +60,10 @@ struct Localizer: Equatable, Sendable {
         .gameOverDownloadSaved: "Tersimpan ke galeri!",
         .gameOverDownloadDenied: "Tidak bisa akses galeri foto",
 
-        .scoresTitle: "Riwayat Skor",
-        .scoresEmpty: "Belum ada permainan.\nMain dulu, yuk!",
+        .scoresTitle: "Papan Peringkat",
+        .scoresEmpty: "Belum ada skor di papan peringkat.\nJadilah yang pertama!",
+        .scoresSignInRequired: "Masuk ke Game Center untuk melihat papan peringkat dunia.",
+        .scoresYou: "Kamu",
 
         .settingsTitle: "Pengaturan",
         .settingsMusicVolume: "Volume Musik",
@@ -69,16 +71,28 @@ struct Localizer: Equatable, Sendable {
         .settingsLanguage: "Bahasa",
         .settingsDone: "Selesai",
 
-        .creditsTitle: "Kredit",
+        .creditsTitle: "Informasi",
         .creditsAboutTitle: "Tentang",
         .creditsAboutBody: """
         Yuk, Nari! adalah permainan olahraga yang terinspirasi dari tari Bali, \
         mengubah gerakan dasar tarian tradisional ini jadi momen seru yang \
         bikin berkeringat.
         """,
+        .creditsHowToPlayTitle: "Cara Bermain",
+        .creditsHowToPlayStep1: "1. NGAYOG, NGAYOG, NGAYOG! Tapi lakukan perlahan, seperti penari.",
+        .creditsHowToPlayStep2: "2. Perhatikan sisi kanan layar untuk referensi!",
+        .creditsHowToPlayStep3: "3. Kumpulkan BUNGA JEPUN saat berjalan untuk poin tambahan!",
+        .creditsHowToPlayStep4: "4. Saat permainan memberi peringatan, NGE'ED dan tahan posisimu untuk menghindari Leyak yang terbang, tapi jangan. berhenti. berjalan!",
+        .creditsHowToPlayStep5: "5. Bersiaplah melakukan pose AGEM kapan saja! Begitu kamu melakukannya, DIAM di tempat!",
+
         .creditsCreditsTitle: "Kredit",
         .creditsCreditsBody: """
-        Pengetahuan koreografi dan musik gamelan disediakan oleh Mekar Bhuana.
+        Pengetahuan akan koreografi tarian dan musik gamelan untuk \
+        permainan ini terinspirasi oleh Mekar Bhuana Centre.
+
+        Mekar Bhuana berarti "mekar ke seluruh dunia" — misi komunitas \
+        ini adalah membuat musik dan tari kuno Bali dikenal kembali dan \
+        dilestarikan, baik di Bali maupun di seluruh dunia.
 
         Instagram: @mekarbhuana_centre
         Website: [balimusicanddance.com](https://balimusicanddance.com)
@@ -150,8 +164,10 @@ struct Localizer: Equatable, Sendable {
         .gameOverDownloadSaved: "Saved to your photos!",
         .gameOverDownloadDenied: "Couldn't access your photo library",
 
-        .scoresTitle: "Score History",
-        .scoresEmpty: "No runs yet.\nGo dance one!",
+        .scoresTitle: "Leaderboard",
+        .scoresEmpty: "No scores on the board yet.\nBe the first!",
+        .scoresSignInRequired: "Sign in to Game Center to see the world leaderboard.",
+        .scoresYou: "You",
 
         .settingsTitle: "Settings",
         .settingsMusicVolume: "Music Volume",
@@ -159,16 +175,28 @@ struct Localizer: Equatable, Sendable {
         .settingsLanguage: "Language",
         .settingsDone: "Done",
 
-        .creditsTitle: "Credits",
+        .creditsTitle: "Information",
         .creditsAboutTitle: "About",
         .creditsAboutBody: """
         Yuk, Nari! is an exercise game inspired by Balinese dance, channeling \
         the traditional art form's most basic movements into fun, \
         sweat-breaking moments.
         """,
+        .creditsHowToPlayTitle: "How to Play",
+        .creditsHowToPlayStep1: "1. WALK, WALK, WALK! But do it gently, like a dancer.",
+        .creditsHowToPlayStep2: "2. Pay attention to the right side of the screen for reference!",
+        .creditsHowToPlayStep3: "3. Collect FRANGIPANIS as you walk for extra points!",
+        .creditsHowToPlayStep4: "4. When the game tells you, SQUAT and hold the position to avoid the flying Leyak, but don't. stop. walking!",
+        .creditsHowToPlayStep5: "5. Be ready to do the AGEM pose at any moment! Once you do, FREEZE!",
+
         .creditsCreditsTitle: "Credits",
         .creditsCreditsBody: """
-        Choreography knowledge and gamelan music provided by Mekar Bhuana.
+        Knowledge of Balinese choreography and gamelan music for this \
+        game was inspired by Mekar Bhuana Centre.
+
+        Mekar Bhuana means "to blossom around the world" — the \
+        community's mission is to help Bali's ancient music and dance \
+        become known again and preserved, both on the island and abroad.
 
         Instagram: @mekarbhuana_centre
         Website: [balimusicanddance.com](https://balimusicanddance.com)

@@ -7,6 +7,7 @@ struct MainMenuView: View {
     let settings: SettingsService
     let credits: CreditsProviding
     let scores: ScoreHistoryStoring
+    let gameCenter: LeaderboardProviding
 
     @Environment(\.strings) private var strings
 
@@ -113,8 +114,11 @@ struct MainMenuView: View {
             .zIndex(1)
 
         case .scores:
-            ScoreHistoryPopupView(records: scores.records, onClose: { viewModel.dismissPopup() })
-                .zIndex(1)
+            LeaderboardPopupView(
+                viewModel: LeaderboardViewModel(gameCenter: gameCenter),
+                onClose: { viewModel.dismissPopup() }
+            )
+            .zIndex(1)
 
         case nil:
             EmptyView()
@@ -139,7 +143,8 @@ struct BlinkingModifier: ViewModifier {
         viewModel: MainMenuViewModel(audio: services.audio, onEnterGameplay: { _ in }),
         settings: services.settings,
         credits: services.credits,
-        scores: services.scores
+        scores: services.scores,
+        gameCenter: services.gameCenter
     )
     .environment(\.strings, services.settings.localizer)
 }

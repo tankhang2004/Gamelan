@@ -61,6 +61,7 @@ final class GameplayViewModel {
     @ObservationIgnored private let source: BodyPoseSource
     @ObservationIgnored private let audio: AudioServicing
     @ObservationIgnored private let scores: ScoreHistoryStoring
+    @ObservationIgnored private let gameCenter: LeaderboardProviding
     @ObservationIgnored private let onExit: () -> Void
     @ObservationIgnored private var consumer: Task<Void, Never>?
     @ObservationIgnored private var lastTimestamp: TimeInterval?
@@ -72,12 +73,14 @@ final class GameplayViewModel {
         source: BodyPoseSource,
         audio: AudioServicing,
         scores: ScoreHistoryStoring,
+        gameCenter: LeaderboardProviding,
         onExit: @escaping () -> Void
     ) {
         self.poses = poses
         self.source = source
         self.audio = audio
         self.scores = scores
+        self.gameCenter = gameCenter
         self.onExit = onExit
     }
 
@@ -239,6 +242,7 @@ final class GameplayViewModel {
 
         guard calibrationProgress >= 1 else { return }
         audio.play(.calibrationComplete)
+        audio.startBackgroundMusic(.gameplay)
         phase = .starting(remaining: Self.countdownSeconds)
     }
 
@@ -288,6 +292,7 @@ final class GameplayViewModel {
         case .gameOver(let score):
             audio.play(.gameOver)
             scores.record(ScoreRecord(score: score, survivedSeconds: run.elapsed))
+            Task { await gameCenter.submit(score: score) }
             phase = .gameOver
         }
 

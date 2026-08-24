@@ -21,6 +21,12 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case creditsTitle
     case creditsAboutTitle
     case creditsAboutBody
+    case creditsHowToPlayTitle
+    case creditsHowToPlayStep1
+    case creditsHowToPlayStep2
+    case creditsHowToPlayStep3
+    case creditsHowToPlayStep4
+    case creditsHowToPlayStep5
     case creditsCreditsTitle
     case creditsCreditsBody
 
@@ -77,6 +83,8 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     // Score history
     case scoresTitle
     case scoresEmpty
+    case scoresSignInRequired
+    case scoresYou
 
     // Play
     case playHoldInstruction
