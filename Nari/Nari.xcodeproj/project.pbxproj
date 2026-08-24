@@ -239,8 +239,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Nari/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Yuk, Nari!";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Kamera dipakai untuk membaca gerak tubuhmu saat bermain. Video tidak direkam dan tidak dikirim ke mana pun.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Dipakai untuk menyimpan kartu skormu ke galeri fotomu.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Kamera dipakai untuk membaca gerak tubuhmu saat bermain. Rekaman sesi bisa kamu simpan sendiri di akhir permainan, dan tidak dikirim ke mana pun.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Dipakai untuk menyimpan kartu skor atau video sesimu ke galeri fotomu.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
@@ -275,8 +275,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Nari/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Yuk, Nari!";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Kamera dipakai untuk membaca gerak tubuhmu saat bermain. Video tidak direkam dan tidak dikirim ke mana pun.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Dipakai untuk menyimpan kartu skormu ke galeri fotomu.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Kamera dipakai untuk membaca gerak tubuhmu saat bermain. Rekaman sesi bisa kamu simpan sendiri di akhir permainan, dan tidak dikirim ke mana pun.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Dipakai untuk menyimpan kartu skor atau video sesimu ke galeri fotomu.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;

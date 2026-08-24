@@ -47,6 +47,23 @@ final class GameplayViewModel {
     private(set) var calibrationProgress: Double = 0
     private(set) var isBodyVisible = false
     private(set) var imageSize: CGSize = .zero
+    /// Wherever the player's wrists are this frame, in normalized image
+    /// space. Kept live in every phase — including paused and game over —
+    /// so a `HandHoverButton` can be reached without the tracker's own
+    /// per-phase gating, which only runs while a run is actually scoring.
+    private(set) var handNormalizedPositions: [CGPoint] = []
+    /// Where this run's clip landed once `SessionRecorder` finishes writing
+    /// it, so the game over screen has something to show and share. Nil both
+    /// before that finishes and on a device that cannot record at all.
+    private(set) var recordedVideoURL: URL?
+    /// False once recording has been tried and failed or is unavailable on
+    /// this device, so the game over screen can stop waiting on a clip that
+    /// will never arrive and fall back to the score card alone.
+    private(set) var isRecordingAvailable = true
+    /// True from Game Over until the clip finishes writing, so the game over
+    /// screen can tell "still encoding" apart from "no video is coming" —
+    /// both look like `recordedVideoURL == nil` otherwise.
+    private(set) var isPreparingRecording = false
 
     /// The loop. Rebuilt on retry so a new run starts from a clean Taksu meter.
     private(set) var run = RunEngine()
@@ -64,6 +81,7 @@ final class GameplayViewModel {
     @ObservationIgnored private let audio: AudioServicing
     @ObservationIgnored private let scores: ScoreHistoryStoring
     @ObservationIgnored private let onExit: () -> Void
+    @ObservationIgnored private let recorder = SessionRecorder()
     @ObservationIgnored private var consumer: Task<Void, Never>?
     @ObservationIgnored private var lastTimestamp: TimeInterval?
     @ObservationIgnored private var bodyLostSeconds: Double = 0
@@ -194,6 +212,7 @@ final class GameplayViewModel {
     /// Starts a whole new run from the game over screen.
     func retry() {
         audio.play(.buttonTap)
+        recorder.cancel()
         run = RunEngine()
         tracker.reset()
         lastEvent = nil
@@ -202,6 +221,7 @@ final class GameplayViewModel {
 
     func exit() {
         consumer?.cancel()
+        recorder.cancel()
         source.stop()
         onExit()
     }
@@ -215,6 +235,8 @@ final class GameplayViewModel {
         lastTimestamp = nil
         tracker.reset()
         footSparks.removeAll()
+        recordedVideoURL = nil
+        isPreparingRecording = false
     }
 
     private func consume() {
@@ -231,6 +253,7 @@ final class GameplayViewModel {
         let delta = timeSinceLastFrame(snapshot.timestamp)
         imageSize = snapshot.imageSize
         isBodyVisible = snapshot.hasAll(BodyPoseSnapshot.requiredForPlay)
+        handNormalizedPositions = [BodyJoint.leftWrist, .rightWrist].compactMap { snapshot.position(of: $0) }
 
         switch phase {
         case .calibrating:
@@ -275,6 +298,9 @@ final class GameplayViewModel {
         if left <= 0 {
             phase = .playing
             bodyLostSeconds = 0
+            // A no-op if a pause-and-resume is what brought the player back
+            // here — the whole run gets one clip, not one per re-entry.
+            recorder.start()
         } else {
             phase = .starting(remaining: left)
         }
@@ -338,6 +364,14 @@ final class GameplayViewModel {
             audio.play(.gameOver)
             scores.record(ScoreRecord(score: score, survivedSeconds: run.elapsed))
             phase = .gameOver
+            isRecordingAvailable = recorder.isAvailable
+            isPreparingRecording = isRecordingAvailable
+            Task { [weak self] in
+                guard let self else { return }
+                let url = await self.recorder.stop()
+                self.recordedVideoURL = url
+                self.isPreparingRecording = false
+            }
         }
 
         // A ngayog tick and a coin both fire constantly and would drown out

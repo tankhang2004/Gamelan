@@ -389,6 +389,17 @@ final class CameraBodyPoseService: NSObject, BodyPoseSource, @unchecked Sendable
     /// is pointing, plus wherever this iPad happens to keep its front camera.
     @MainActor
     private func uprightAngle() -> CGFloat {
+        // On a Mac there is no accelerometer, so `UIDevice.current.orientation`
+        // never leaves `.unknown` and `updateMountingOffset()` can never
+        // measure anything — it silently keeps the iPad-shaped default of 0,
+        // which lands the same angle the iPad table would give a portrait-edge
+        // camera, and the Mac's own FaceTime camera is mounted 180 degrees from
+        // that. A Mac window never rotates, so unlike the iPad this needs no
+        // per-frame recalculation — it is a fixed constant of the hardware.
+        if ProcessInfo.processInfo.isiOSAppOnMac {
+            return 180
+        }
+
         updateMountingOffset()
 
         let base = Self.baseRotationAngle(for: Self.interfaceOrientation())
