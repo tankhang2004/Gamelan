@@ -35,29 +35,49 @@ struct GameplayView: View {
     // MARK: - Stage
 
     private var stage: some View {
-        ZStack {
-            cameraArea
+        GeometryReader { proxy in
+            ZStack {
+                cameraArea
 
-            // Over the player but under the HUD: the wave is scenery, and the
-            // score and the hold timer have to stay readable through it.
-            squatWave
+                // Over the player but under the HUD: the wave is scenery, and the
+                // score and the hold timer have to stay readable through it.
+                squatWave
 
-            if viewModel.phase == .playing {
-                hud
-                    .transition(.opacity)
+                if viewModel.phase == .playing {
+                    hud
+                        .transition(.opacity)
 
-                // Over the HUD, not under it. Coins are chased now rather than
-                // reached for, which means they land near the edges where the
-                // meter and the move card live — and a coin hidden behind the
-                // furniture is one nobody goes after.
-                coins
+                    // Over the HUD, not under it. Coins are chased now rather than
+                    // reached for, which means they land near the edges where the
+                    // meter and the move card live — and a coin hidden behind the
+                    // furniture is one nobody goes after.
+                    coins
+                }
+
+                phaseOverlay
+                eventFlash
             }
-
-            phaseOverlay
-            eventFlash
+            .overlay { freezeFrame }
+            .background(Theme.Palette.ink)
+            .environment(\.handScreenPositions, handScreenPositions(in: proxy))
         }
-        .overlay { freezeFrame }
-        .background(Theme.Palette.ink)
+    }
+
+    /// The player's wrists, mapped from normalized image space onto this
+    /// stage's own screen coordinates — the same trip a pose marker or a coin
+    /// makes — so a `HandHoverButton` anywhere in the stage can compare its
+    /// own frame against them directly.
+    private func handScreenPositions(in proxy: GeometryProxy) -> [CGPoint] {
+        let origin = proxy.frame(in: .global).origin
+        let mapper = CameraFrameMapper(
+            imageSize: viewModel.imageSize,
+            viewSize: proxy.size,
+            isMirrored: viewModel.isPreviewMirrored
+        )
+        return viewModel.handNormalizedPositions.map { normalized in
+            let local = mapper.point(normalized)
+            return CGPoint(x: origin.x + local.x, y: origin.y + local.y)
+        }
     }
 
     private var cameraArea: some View {
@@ -148,13 +168,13 @@ struct GameplayView: View {
                     Spacer(minLength: 0)
                     HStack {
                         Spacer(minLength: 0)
-                        Button(action: { viewModel.pause() }) {
+                        HandHoverButton(action: { viewModel.pause() }) {
                             Image(systemName: "pause.fill")
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(size: 32, weight: .bold))
                                 .foregroundStyle(Theme.Palette.cream)
-                                .frame(width: 64, height: 64)
+                                .frame(width: 88, height: 88)
                                 .background(Circle().fill(Theme.Palette.indigo))
-                                .overlay(Circle().strokeBorder(Theme.Palette.ink, lineWidth: 4))
+                                .overlay(Circle().strokeBorder(Theme.Palette.ink, lineWidth: 5))
                         }
                         .buttonStyle(.plain)
                     }
@@ -284,13 +304,45 @@ struct GameplayView: View {
         }
     }
 
+    /// Same corner spot, shape, and orange the tutorial's own back arrow uses
+    /// — the player already learned that spot means "leave" before ever
+    /// reaching calibration, so preparing and calibrating just keep it there.
+    private var backToHomeCorner: some View {
+        VStack {
+            HStack {
+                backToHomeButton
+                    .offset(x: 40, y: 24)
+                Spacer()
+            }
+            Spacer()
+        }
+        .padding(28)
+    }
+
+    /// The tutorial's plain tap-only arrow, wearing the same hover-to-select
+    /// dwell the pause button uses — hands are already up mid-calibration, so
+    /// leaving shouldn't require walking back to the iPad either.
+    private var backToHomeButton: some View {
+        HandHoverButton(action: { viewModel.exit() }) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 64 * 0.6, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 64, height: 64)
+                .background(Circle().fill(Theme.Palette.cueOrange))
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Overlays
 
     @ViewBuilder
     private var phaseOverlay: some View {
         switch viewModel.phase {
         case .preparing:
-            banner(title: strings[.calibrationTitle], subtitle: strings[.calibrationSearching])
+            ZStack {
+                banner(title: strings[.calibrationTitle], subtitle: strings[.calibrationSearching])
+                backToHomeCorner
+            }
 
         case .calibrating:
             ZStack {
@@ -324,15 +376,7 @@ struct GameplayView: View {
                     }
                 }
 
-                VStack {
-                    HStack {
-                        PaintedIconButton(symbol: "chevron.left", diameter: 64, action: { viewModel.exit() })
-                            .offset(x: 40, y: 24)
-                        Spacer()
-                    }
-                    Spacer()
-                }
-                .padding(28)
+                backToHomeCorner
             }
 
         case .starting(let remaining):
@@ -347,6 +391,8 @@ struct GameplayView: View {
                 survived: viewModel.clockText,
                 isBest: scores.best.map { $0.score <= viewModel.run.score } ?? true,
                 bestScore: scores.best?.score ?? 0,
+                videoURL: viewModel.recordedVideoURL,
+                isPreparingVideo: viewModel.isPreparingRecording,
                 onRetry: { viewModel.retry() },
                 onMenu: { viewModel.exit() }
             )
@@ -489,23 +535,47 @@ struct GameplayView: View {
         ZStack {
             Theme.Palette.scrim.ignoresSafeArea()
 
-            VStack(spacing: 24) {
+            // Exit lives in its own corner, well clear of Resume — with a
+            // two-second hold, a hand hovering anywhere near the middle of
+            // the screen should only ever be able to mean "resume".
+            VStack {
+                HStack {
+                    exitCornerButton
+                    Spacer()
+                }
+                Spacer()
+            }
+            .padding(28)
+
+            VStack(spacing: 28) {
                 Text(strings[.playPause])
                     .font(Theme.Fonts.title(52))
                     .foregroundStyle(Theme.Palette.ochre)
 
-                Button(strings[.playResume]) { viewModel.resume() }
-                    .buttonStyle(PopupActionButtonStyle())
-
-                Button(strings[.playExit]) {
-                    audio.play(.buttonTap)
-                    viewModel.exit()
+                HandHoverButton(action: { viewModel.resume() }) {
+                    Label(strings[.playResume], systemImage: "play.fill")
                 }
-                    .buttonStyle(.plain)
-                    .font(Theme.Fonts.label(19))
-                    .foregroundStyle(Theme.Palette.cream.opacity(0.85))
+                .buttonStyle(PaintedButtonStyle())
             }
         }
+    }
+
+    /// A small, deliberately unassuming badge, so leaving mid-session is
+    /// never the thing a hovering hand lands on by accident.
+    private var exitCornerButton: some View {
+        HandHoverButton(action: { viewModel.exit() }) {
+            VStack(spacing: 3) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 18, weight: .bold))
+                Text(strings[.playExit])
+                    .font(Theme.Fonts.label(12))
+            }
+            .foregroundStyle(Theme.Palette.cream)
+            .frame(width: 72, height: 72)
+            .background(Circle().fill(Theme.Palette.ink.opacity(0.55)))
+            .overlay(Circle().strokeBorder(Theme.Palette.cream.opacity(0.6), lineWidth: 3))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Camera problems

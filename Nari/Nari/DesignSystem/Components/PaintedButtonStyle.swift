@@ -1,14 +1,16 @@
 import SwiftUI
 
 /// The indigo pill with a heavy ink outline that every primary action uses.
+///
+/// No click sound here on purpose: every current caller wraps this in a
+/// `HandHoverButton`, which already plays one on fire — adding a second here
+/// (on press) would double it up.
 struct PaintedButtonStyle: ButtonStyle {
     var fill: Color = Theme.Palette.indigo
     var textColor: Color = Theme.Palette.cream
     var borderColor: Color = Theme.Palette.ink
     var height: CGFloat = 84
     var fontSize: CGFloat = 40
-
-    @Environment(\.audio) private var audio
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -27,9 +29,6 @@ struct PaintedButtonStyle: ButtonStyle {
             .overlay(Capsule().strokeBorder(borderColor, lineWidth: height * 0.06))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.7), value: configuration.isPressed)
-            .onChange(of: configuration.isPressed) { _, isPressed in
-                if isPressed { audio.play(.buttonTap) }
-            }
     }
 }
 

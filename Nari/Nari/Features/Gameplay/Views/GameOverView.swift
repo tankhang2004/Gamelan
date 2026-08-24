@@ -1,3 +1,4 @@
+import AVKit
 import Photos
 import SwiftUI
 
@@ -9,6 +10,11 @@ struct GameOverView: View {
     let survived: String
     let isBest: Bool
     let bestScore: Int
+    /// Where `GameplayViewModel` wrote this run's screen recording, once
+    /// `SessionRecorder` finishes encoding it. Nil while that is still in
+    /// flight, and forever nil on a device that cannot record at all.
+    let videoURL: URL?
+    let isPreparingVideo: Bool
     let onRetry: () -> Void
     let onMenu: () -> Void
 
@@ -16,9 +22,15 @@ struct GameOverView: View {
     @Environment(\.audio) private var audio
     @State private var landed = false
     @State private var downloadStatus: String?
+    @State private var isSharePresented = false
+    @State private var player: AVPlayer?
 
     private var shareMessage: String {
         String(format: strings[.gameOverShareMessage], score)
+    }
+
+    private var shareItems: [Any] {
+        videoURL.map { [shareMessage, $0] } ?? [shareMessage]
     }
 
     var body: some View {
@@ -36,7 +48,7 @@ struct GameOverView: View {
 
                 HStack(alignment: .center, spacing: 48) {
                     scoreCard
-                    videoPlaybackPlaceholder
+                    videoPlayback
                 }
 
                 Spacer()
@@ -49,6 +61,10 @@ struct GameOverView: View {
                             .foregroundStyle(.white.opacity(0.8))
                     }
                 }
+                // Nudged up off the bottom edge, so a hand reaching toward
+                // the buttons from a few metres back doesn't foreshorten
+                // into the very edge of frame.
+                .padding(.bottom, 28)
             }
             .padding(32)
             .opacity(landed ? 1 : 0)
@@ -57,15 +73,22 @@ struct GameOverView: View {
         .onAppear {
             withAnimation(Theme.Motion.cueDrop) { landed = true }
         }
+        .sheet(isPresented: $isSharePresented) {
+            ActivityShareSheet(items: shareItems)
+        }
+        .onAppear { attachPlayerIfNeeded() }
+        .onChange(of: videoURL) { _, _ in attachPlayerIfNeeded() }
+    }
+
+    private func attachPlayerIfNeeded() {
+        guard let videoURL, player == nil else { return }
+        player = AVPlayer(url: videoURL)
     }
 
     // MARK: - Close
 
     private var closeButton: some View {
-        Button(action: {
-            audio.play(.buttonTap)
-            onMenu()
-        }) {
+        HandHoverButton(action: onMenu) {
             Image(systemName: "xmark")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(Theme.Palette.ink)
@@ -122,15 +145,39 @@ struct GameOverView: View {
 
     // MARK: - Playback
 
-    /// Stands in for the recorded run until the recording pipeline lands.
+    @ViewBuilder
+    private var videoPlayback: some View {
+        if let player {
+            VideoPlayer(player: player)
+                .frame(width: 320, height: 240)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(.white, lineWidth: 3)
+                )
+        } else {
+            videoPlaybackPlaceholder
+        }
+    }
+
+    /// Shown until the clip is ready, and left up permanently on a device
+    /// that never produces one (the simulator, or recording disabled).
     private var videoPlaybackPlaceholder: some View {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
             .fill(Theme.Palette.ink.opacity(0.3))
             .frame(width: 320, height: 240)
             .overlay(
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.white.opacity(0.85))
+                Group {
+                    if isPreparingVideo {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(1.4)
+                    } else {
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                }
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -142,17 +189,17 @@ struct GameOverView: View {
 
     private var actionRow: some View {
         HStack(spacing: 20) {
-            Button(action: onRetry) {
+            HandHoverButton(action: onRetry) {
                 Label(strings[.gameOverRetry], systemImage: "arrow.counterclockwise")
             }
             .buttonStyle(pillStyle)
 
-            ShareLink(item: shareMessage) {
+            HandHoverButton(action: { isSharePresented = true }) {
                 Label(strings[.gameOverShare], systemImage: "square.and.arrow.up")
             }
             .buttonStyle(pillStyle)
 
-            Button(action: saveScoreCard) {
+            HandHoverButton(action: saveRecording) {
                 Label(strings[.gameOverDownload], systemImage: "arrow.down.to.line")
             }
             .buttonStyle(pillStyle)
@@ -165,8 +212,32 @@ struct GameOverView: View {
 
     // MARK: - Download
 
+    /// Saves the run's video when one exists; falls back to the score card
+    /// image on a device that could never record one in the first place.
     @MainActor
-    private func saveScoreCard() {
+    private func saveRecording() {
+        guard let videoURL else {
+            saveScoreCardImage()
+            return
+        }
+
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else {
+                Task { @MainActor in showDownloadStatus(strings[.gameOverDownloadDenied]) }
+                return
+            }
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: videoURL)
+            } completionHandler: { success, _ in
+                Task { @MainActor in
+                    showDownloadStatus(success ? strings[.gameOverDownloadSaved] : strings[.gameOverDownloadDenied])
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func saveScoreCardImage() {
         let renderer = ImageRenderer(content: scoreCard.padding(20).background(Theme.Palette.ochreLight))
         renderer.scale = UIScreen.main.scale
         guard let image = renderer.uiImage else { return }
@@ -195,6 +266,19 @@ struct GameOverView: View {
     }
 }
 
+/// A plain `UIActivityViewController` wrapper, standing in for `ShareLink`
+/// here because `ShareLink` has no way to be opened programmatically — and a
+/// `HandHoverButton` needs to open it from a completed hover, not only a tap.
+private struct ActivityShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
 #Preview {
     ZStack {
         GameOverView(
@@ -202,6 +286,8 @@ struct GameOverView: View {
             survived: "01:45",
             isBest: true,
             bestScore: 18420,
+            videoURL: nil,
+            isPreparingVideo: false,
             onRetry: {},
             onMenu: {}
         )
