@@ -11,6 +11,8 @@ enum SoundEffect: String, Sendable {
     case calibrationComplete
 
     case ngayogCycle
+    /// A foot landing during the walk.
+    case footStep
     /// A coin swept up during the walk.
     case coinCollected
     case squatCue

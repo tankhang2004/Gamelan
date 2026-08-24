@@ -12,9 +12,15 @@ struct RunInput: Sendable {
     var isSquatting = false
     /// All nine tracked points are inside the cued pose right now.
     var matchesCuedPose = false
-    /// Both wrists in body space, for sweeping up coins. Empty when the body
-    /// cannot be read this frame.
+    /// Both wrists in normalized image space, for sweeping up coins. Empty when
+    /// the body cannot be read this frame.
     var handPositions: [CGPoint] = []
+    /// The hip centre in the same space, so a coin can be placed a walk away
+    /// from wherever the player is standing. Nil when the body is not readable.
+    var playerCenter: CGPoint?
+    /// Frame height over width, so a gap upwards means the same as a gap
+    /// sideways when a distance is measured.
+    var frameAspect: CGFloat = 0.75
 
     static let idle = RunInput()
 }
@@ -124,6 +130,8 @@ final class RunEngine {
         for value in coinField.advance(
             delta: delta,
             hands: input.handPositions,
+            player: input.playerCenter,
+            frameAspect: input.frameAspect,
             rules: rules,
             generator: &generator
         ) {

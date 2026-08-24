@@ -69,18 +69,58 @@ struct RunRules: Sendable {
     /// Value of the smallest coin, and the step between one tier and the next,
     /// so every coin on screen is worth a round multiple of ten.
     var coinValueStep: Int = 10
-    /// Seconds a coin stays out before it fades.
-    var coinLifetime: Double = 4
+    /// Seconds a coin stays out, for the nearest and the furthest.
+    ///
+    /// The design asks for four seconds, which is right for a coin at arm's
+    /// length. Now that the far ones are a walk away, holding every coin to
+    /// four would make the best of them impossible rather than hard, so the
+    /// time out scales with the distance. Set both ends to 4 to flatten it.
+    var coinLifetime: ClosedRange<Double> = 4...7
     var coinSpawnInterval: ClosedRange<Double> = 1.2...2.2
     var maximumCoinsOnScreen: Int = 3
-    /// Distance from the hip centre, in torso lengths, for the smallest and the
-    /// largest coin. The far end sits at the edge of a child's reach, so the
-    /// coins that pay best are the ones worth stretching for.
-    var coinDistanceRange: ClosedRange<CGFloat> = 0.6...1.5
-    /// Drawn radius of the smallest and largest coin, in torso lengths.
-    var coinRadiusRange: ClosedRange<CGFloat> = 0.16...0.42
+    /// How far a coin may spawn from the player, in frame widths.
+    ///
+    /// The near end is a lean, the far end is a walk across the room. Nothing
+    /// spawns inside the near end, so every coin costs the player some
+    /// movement rather than being collected by standing still and waving.
+    ///
+    /// The far end is the centre-to-corner distance of the play area below, so
+    /// the top tier is reachable by a player standing in the middle of it. Set
+    /// it beyond that and the best coins simply never get drawn.
+    var coinPlayerDistanceRange: ClosedRange<CGFloat> = 0.16...0.42
+    /// The part of the frame coins may use, in normalized image coordinates.
+    ///
+    /// Not the whole frame, because the HUD is in the way: the Taksu meter runs
+    /// down the left, the move card down the right, the score and clock across
+    /// the top. A coin behind any of those is one the player never sees, so the
+    /// corners worth chasing are the corners of this box rather than of the
+    /// picture.
+    /// Horizontal bounds are dependable: a 4:3 capture filling a wider screen
+    /// is scaled by width, so image x and screen x line up. Vertical bounds
+    /// drift by a few percent with the screen's shape, hence the loose margin
+    /// at the top rather than a value tuned to one iPad.
+    var coinPlayArea = CGRect(x: 0.12, y: 0.22, width: 0.68, height: 0.70)
+    /// Drawn radius of the smallest and largest coin, in frame widths.
+    var coinRadiusRange: ClosedRange<CGFloat> = 0.030...0.070
     /// Clear space kept between two coins, so they never overlap on screen.
-    var coinMinimumSeparation: CGFloat = 0.25
+    var coinMinimumSeparation: CGFloat = 0.04
+
+    // MARK: - Footwork
+
+    /// How far an ankle has to lift off the ground, in torso lengths, before
+    /// coming back down counts as a step rather than as a wobble.
+    ///
+    /// Low on purpose. Ngayog is a small shuffling walk, not a march, and a
+    /// threshold set for a clear knee-high step quietly ignores half of what a
+    /// child actually does. Raise it if sparks start appearing while a player
+    /// stands still.
+    var stepLiftThreshold: CGFloat = 0.045
+    /// How close to the ground it has to return to land.
+    var stepPlantThreshold: CGFloat = 0.018
+    /// Shortest gap between two steps on the same foot, in seconds.
+    var stepDebounce: Double = 0.16
+    /// How long a spark burns where a foot landed.
+    var stepSparkSeconds: Double = 0.55
 
     // MARK: - Interrupt scheduler
 

@@ -44,6 +44,12 @@ struct GameplayView: View {
             if viewModel.phase == .playing {
                 hud
                     .transition(.opacity)
+
+                // Over the HUD, not under it. Coins are chased now rather than
+                // reached for, which means they land near the edges where the
+                // meter and the move card live — and a coin hidden behind the
+                // furniture is one nobody goes after.
+                coins
             }
 
             phaseOverlay
@@ -73,7 +79,8 @@ struct GameplayView: View {
                 )
 
                 if viewModel.phase == .playing {
-                    CoinsView(placements: viewModel.coinPlacements, mapper: mapper)
+                    // Sparks are on the ground, so they sit under everything.
+                    FootSparksView(sparks: viewModel.footSparks, mapper: mapper)
                 }
 
                 if viewModel.run.phase.cuedSide != nil {
@@ -156,6 +163,19 @@ struct GameplayView: View {
         }
     }
 
+    private var coins: some View {
+        GeometryReader { proxy in
+            CoinsView(
+                placements: viewModel.coinPlacements,
+                mapper: CameraFrameMapper(
+                    imageSize: viewModel.imageSize,
+                    viewSize: proxy.size,
+                    isMirrored: viewModel.isPreviewMirrored
+                )
+            )
+        }
+    }
+
     @ViewBuilder
     private var cueCard: some View {
         if let pose = viewModel.cuedPose {
@@ -178,6 +198,45 @@ struct GameplayView: View {
                 artworkName: "PoseNgayog",
                 symbolName: "figure.walk"
             )
+        }
+    }
+
+    /// A 0.5x/1x style toggle, so an iPad on a table can still take in a whole
+    /// child without anyone having to move the furniture.
+    private var fieldOfViewControl: some View {
+        VStack(spacing: 10) {
+            Text(strings[.cameraFieldHint])
+                .font(Theme.Fonts.body(17))
+                .foregroundStyle(Theme.Palette.cream.opacity(0.9))
+                .shadow(color: Theme.Palette.ink, radius: 0, x: 2, y: 2)
+
+            HStack(spacing: 0) {
+                ForEach(CameraFieldOfView.allCases) { option in
+                    let isOn = viewModel.fieldOfView == option
+
+                    Button {
+                        guard !isOn else { return }
+                        viewModel.toggleFieldOfView()
+                    } label: {
+                        VStack(spacing: 1) {
+                            Text(option.shortLabel)
+                                .font(Theme.Fonts.readout(23))
+                            Text(strings[option.labelKey])
+                                .font(Theme.Fonts.body(14))
+                        }
+                        .foregroundStyle(isOn ? Theme.Palette.ink : Theme.Palette.cream)
+                        .frame(width: 104, height: 62)
+                        .background(
+                            Capsule().fill(isOn ? Theme.Palette.ochre : Color.clear)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(5)
+            .background(Capsule().fill(Theme.Palette.ink.opacity(0.72)))
+            .overlay(Capsule().strokeBorder(Theme.Palette.cream.opacity(0.55), lineWidth: 3))
+            .animation(Theme.Motion.popup, value: viewModel.fieldOfView)
         }
     }
 
@@ -251,6 +310,17 @@ struct GameplayView: View {
 
                 StageProgressBorder(progress: viewModel.calibrationProgress, color: Theme.Palette.poseCorrect)
                     .padding(6)
+
+                // Calibration is the moment the player is looking at their own
+                // feet wondering why they are cut off, so the control belongs
+                // here rather than buried in Settings.
+                if viewModel.canChangeFieldOfView {
+                    VStack {
+                        Spacer()
+                        fieldOfViewControl
+                            .padding(.bottom, 46)
+                    }
+                }
             }
 
         case .starting(let remaining):
@@ -478,6 +548,7 @@ struct GameplayView: View {
             audio: services.audio,
             scores: services.scores,
             gameCenter: services.gameCenter,
+            settings: services.settings,
             onExit: {}
         ),
         scores: services.scores

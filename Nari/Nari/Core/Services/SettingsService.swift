@@ -36,6 +36,12 @@ final class SettingsService {
         persist()
     }
 
+    func setCameraFieldOfView(_ fieldOfView: CameraFieldOfView) {
+        guard settings.cameraFieldOfView != fieldOfView else { return }
+        settings.cameraFieldOfView = fieldOfView
+        persist()
+    }
+
     func setLanguage(_ language: AppLanguage) {
         guard settings.language != language else { return }
         settings.language = language
