@@ -6,15 +6,16 @@ import Observation
 /// the loop actually asks. Keeping the engine behind this struct is what lets
 /// the whole game be driven by fake input in a preview or a test.
 struct RunInput: Sendable {
-    /// A full left-right head tilt finished on this frame.
+    /// A foot landed on this frame — one beat of the march.
     var completedNgayogCycle = false
     /// The player is currently below the squat threshold.
     var isSquatting = false
     /// All nine tracked points are inside the cued pose right now.
     var matchesCuedPose = false
-    /// Both wrists in normalized image space, for sweeping up coins. Empty when
-    /// the body cannot be read this frame.
-    var handPositions: [CGPoint] = []
+    /// Wrists and ankles in normalized image space — a flower is caught with
+    /// whichever reaches it first. Empty when the body cannot be read this
+    /// frame.
+    var catchPositions: [CGPoint] = []
     /// The hip centre in the same space, so a coin can be placed a walk away
     /// from wherever the player is standing. Nil when the body is not readable.
     var playerCenter: CGPoint?
@@ -127,14 +128,16 @@ final class RunEngine {
             events.append(.ngayogCycle)
         }
 
-        for value in coinField.advance(
+        let tick = coinField.advance(
             delta: delta,
-            hands: input.handPositions,
+            catchers: input.catchPositions,
             player: input.playerCenter,
             frameAspect: input.frameAspect,
             rules: rules,
             generator: &generator
-        ) {
+        )
+        if tick.didSpawn { events.append(.coinSpawned) }
+        for value in tick.collected {
             score += value
             events.append(.coinCollected(value: value))
         }

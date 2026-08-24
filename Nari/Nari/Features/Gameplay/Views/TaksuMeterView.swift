@@ -1,72 +1,111 @@
 import SwiftUI
 
-/// The Taksu meter: a torn strip of paper down the left of the screen with the
-/// energy painted into it, and the percentage printed as a number beside it.
+/// The Taksu meter: a painted strip down the left of the screen with the
+/// energy filled into it.
 ///
-/// The number is not decoration. Judging a bar by its length alone is hard for
-/// some players, and the meter is the only stat that can end a run.
+/// It sits half faded most of the time, because the camera behind it is the
+/// game — a solid bar down the edge of the picture is room the player cannot
+/// dance in. It only lights up when the number actually moves, glowing green
+/// on a gain and red on a loss, then settles back out of the way.
 struct TaksuMeterView: View {
     let fraction: Double
     let isLow: Bool
 
-    @State private var pulse = false
+    /// How faded the meter sits when nothing is happening to it.
+    private static let restingOpacity: Double = 0.5
+    private static let flashSeconds: Double = 0.55
 
-    private var fill: Color {
-        switch fraction {
-        case ..<0.2: Theme.Palette.taksuLow
-        case ..<0.5: Theme.Palette.taksuMid
-        default: Theme.Palette.taksuFull
-        }
-    }
+    @State private var pulse = false
+    @State private var flashColor: Color?
+    @State private var flashTask: Task<Void, Never>?
 
     var body: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
 
             ZStack(alignment: .bottom) {
-                TornEdgeShape(seed: 19, roughness: 0.012, steps: 16)
-                    .fill(Theme.Palette.paper)
+                Image("energy-bg")
+                    .resizable()
 
-                Rectangle()
-                    .fill(fill)
-                    .frame(height: proxy.size.height * clamped)
+                Image("energy-fill")
+                    .resizable()
+                    .frame(height: proxy.size.height)
+                    .mask(alignment: .bottom) {
+                        Rectangle().frame(height: proxy.size.height * clamped)
+                    }
                     .animation(Theme.Motion.meter, value: fraction)
-
-                TornEdgeShape(seed: 19, roughness: 0.012, steps: 16)
-                    .stroke(Theme.Palette.ink, lineWidth: 5)
 
                 VStack {
                     Spacer(minLength: 0)
                     Text("\(Int(clamped * 100))%")
                         .font(Theme.Fonts.readout(width * 0.42))
-                        .foregroundStyle(Theme.Palette.ink)
+                        .foregroundStyle(.white)
+                        .outlined(color: Theme.Palette.ink, width: 1.5)
                         .padding(.bottom, width * 0.22)
                 }
             }
-            .clipShape(TornEdgeShape(seed: 19, roughness: 0.012, steps: 16))
+            // The whole meter brightens together, so a change reads as the bar
+            // reacting rather than as one layer flickering inside it.
+            .opacity(flashColor == nil ? Self.restingOpacity : 1)
+            .shadow(color: flashColor ?? .clear, radius: width * 0.5)
+            .shadow(color: flashColor ?? .clear, radius: width * 0.18)
+            .animation(.easeOut(duration: 0.18), value: flashColor)
             // Low Taksu pulses so the player notices without watching the bar.
+            // Template rendering is what makes the tint take: the artwork is a
+            // full-colour PNG, so a plain `foregroundStyle` would leave it
+            // white and the "warning" would read as a flash of nothing.
             .overlay(
-                TornEdgeShape(seed: 19, roughness: 0.012, steps: 16)
-                    .stroke(Theme.Palette.taksuLow, lineWidth: 8)
-                    .opacity(isLow && pulse ? 0.9 : 0)
+                Image("energy-bg")
+                    .resizable()
+                    .renderingMode(.template)
+                    .foregroundStyle(Theme.Palette.taksuLow)
+                    .opacity(isLow && pulse ? 0.55 : 0)
+                    .allowsHitTesting(false)
             )
-            .shadow(color: Theme.Palette.ink.opacity(0.3), radius: 10, x: 4, y: 6)
         }
         .onAppear { pulse = true }
         .animation(
             isLow ? .easeInOut(duration: 0.6).repeatForever(autoreverses: true) : .default,
             value: pulse
         )
+        .onChange(of: fraction) { previous, current in
+            guard abs(current - previous) > 0.0001 else { return }
+            flash(current > previous ? Theme.Palette.poseCorrect : Theme.Palette.poseWrong)
+        }
+        .onDisappear { flashTask?.cancel() }
+    }
+
+    /// Lights the meter up in `color`, then fades it back to resting. A second
+    /// change mid-flash replaces the first rather than queueing behind it, so a
+    /// gain immediately after a loss shows green straight away.
+    private func flash(_ color: Color) {
+        flashTask?.cancel()
+        flashColor = color
+        flashTask = Task {
+            try? await Task.sleep(for: .seconds(Self.flashSeconds))
+            guard !Task.isCancelled else { return }
+            flashColor = nil
+        }
     }
 
     private var clamped: Double { max(0, min(1, fraction)) }
 }
 
 #Preview {
-    HStack(spacing: 40) {
-        TaksuMeterView(fraction: 0.72, isLow: false).frame(width: 60, height: 420)
-        TaksuMeterView(fraction: 0.14, isLow: true).frame(width: 60, height: 420)
+    struct Demo: View {
+        @State private var fraction = 0.72
+        var body: some View {
+            HStack(spacing: 40) {
+                TaksuMeterView(fraction: fraction, isLow: fraction < 0.2)
+                    .frame(width: 60, height: 420)
+                VStack(spacing: 12) {
+                    Button("Gain") { fraction = min(1, fraction + 0.15) }
+                    Button("Lose") { fraction = max(0, fraction - 0.15) }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(50)
+        }
     }
-    .padding(50)
-    .background(PaintTexture().ignoresSafeArea())
+    return Demo().background(Theme.Palette.indigoDeep)
 }

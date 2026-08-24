@@ -48,7 +48,10 @@ enum RunPhase: Equatable, Sendable {
 /// layer can play the right cue. Purely a report — no state lives here.
 enum RunEvent: Equatable, Sendable {
     case ngayogCycle
-    /// A coin was swept up during the walk, worth this many points.
+    /// A frangipani opened somewhere in the room.
+    case coinSpawned
+    /// A frangipani was picked, worth this many points at the size it was
+    /// caught — the longer it had been wilting, the less this is.
     case coinCollected(value: Int)
     case squatCued
     case squatHit

@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// One coin waiting to be swept up during the walk.
+/// One frangipani waiting to be swept up during the walk.
 struct Coin: Identifiable, Sendable {
     let id: UUID
     /// 1 up to `RunRules.coinTierCount`. A coin that spawned further from the
@@ -20,39 +20,68 @@ struct Coin: Identifiable, Sendable {
     let lifetime: Double
     var remaining: Double
 
-    /// 1 when the coin has just appeared, 0 as it runs out.
+    /// 1 when the flower has just appeared, 0 as it runs out.
     var remainingFraction: Double { max(0, min(1, remaining / lifetime)) }
+
+    /// The flower wilts as it ages: it is drawn smaller and pays less the
+    /// longer it goes unpicked. Both fall off together on purpose — the size
+    /// on screen *is* the reward readout, so a player never has to read a
+    /// number to know that the big one across the room is the one to chase.
+    func currentRadius(_ rules: RunRules) -> CGFloat {
+        radius * Self.lerp(rules.coinWiltScale, CGFloat(remainingFraction))
+    }
+
+    func currentValue(_ rules: RunRules) -> Int {
+        let scale = Self.lerp(rules.coinWiltValue, CGFloat(remainingFraction))
+        return max(1, Int((Double(value) * Double(scale)).rounded()))
+    }
+
+    private static func lerp(_ range: ClosedRange<CGFloat>, _ step: CGFloat) -> CGFloat {
+        range.lowerBound + (range.upperBound - range.lowerBound) * step
+    }
 }
 
-/// Scatters coins across the room while the player walks, ages them out, and
-/// reports the ones a hand reached in time.
+/// What one frame of the field did, so the loop can score the pickups and
+/// sound the arrivals without `CoinField` knowing what a `RunEvent` is.
+struct CoinFieldTick {
+    var collected: [Int] = []
+    var didSpawn = false
+}
+
+/// Scatters frangipanis across the room while the player marches, wilts them
+/// as they age, and reports the ones a hand or a foot reached in time.
 struct CoinField {
     private(set) var coins: [Coin] = []
     private var timeToNextSpawn: Double = 0
 
-    /// Advances by one frame and returns the value of every coin collected.
+    /// Advances by one frame and reports what was picked and what arrived.
     ///
-    /// `hands` and `player` are in normalized image space; `frameAspect` is the
-    /// frame's height over its width, which turns a vertical gap into the same
-    /// units as a horizontal one so a "distance" means the same in both.
+    /// `catchers` are the wrists and ankles — a flower is caught with whatever
+    /// reaches it first. They and `player` are in normalized image space;
+    /// `frameAspect` is the frame's height over its width, which turns a
+    /// vertical gap into the same units as a horizontal one so a "distance"
+    /// means the same in both.
     mutating func advance(
         delta: Double,
-        hands: [CGPoint],
+        catchers: [CGPoint],
         player: CGPoint?,
         frameAspect: CGFloat,
         rules: RunRules,
         generator: inout SeededGenerator
-    ) -> [Int] {
-        var collected: [Int] = []
+    ) -> CoinFieldTick {
+        var tick = CoinFieldTick()
 
-        // Collected before ageing, so a coin on its very last frame can still
-        // be caught rather than vanishing out from under a hand.
+        // Collected before ageing, so a flower on its very last frame can
+        // still be caught rather than vanishing out from under a hand. The
+        // hit test uses the wilted radius, so a flower is exactly as hard to
+        // catch as it looks.
         coins.removeAll { coin in
-            let touched = hands.contains { hand in
-                Self.distance(hand, coin.position, frameAspect) <= coin.radius
+            let reach = coin.currentRadius(rules)
+            let touched = catchers.contains { catcher in
+                Self.distance(catcher, coin.position, frameAspect) <= reach
             }
             guard touched else { return false }
-            collected.append(coin.value)
+            tick.collected.append(coin.currentValue(rules))
             return true
         }
 
@@ -68,14 +97,15 @@ struct CoinField {
                let player,
                let coin = spawn(near: player, frameAspect: frameAspect, rules: rules, generator: &generator) {
                 coins.append(coin)
+                tick.didSpawn = true
             }
         }
 
-        return collected
+        return tick
     }
 
-    /// Coins belong to the walk. An interrupt takes them off the floor so the
-    /// player is not being asked to reach for something during a Freeze.
+    /// Flowers belong to the march. An interrupt takes them off the floor so
+    /// the player is not being asked to reach for something during a Freeze.
     mutating func clear() {
         coins.removeAll()
         timeToNextSpawn = 0

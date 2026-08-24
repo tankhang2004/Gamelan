@@ -12,11 +12,26 @@ struct RunRules: Sendable {
     var startingEnergy: Double = 50
     var maximumEnergy: Double = 100
 
-    // MARK: - Ngayog (the default walk)
+    // MARK: - Ngayog (marching in place, the default move)
 
-    /// One full left-right head tilt.
-    var ngayogCycleEnergy: Double = 2
-    var ngayogCycleScore: Int = 5
+    /// Paid per footfall while marching.
+    ///
+    /// Marching is optional: it scores nothing on its own, so a player can
+    /// stand still and still pick flowers. What it buys is Taksu — the meter
+    /// that keeps the run alive — which makes it worth doing without making
+    /// it the thing being scored.
+    ///
+    /// Halved from the old head-tilt reward because a march lands roughly
+    /// twice as often as a full left-right tilt did, so the energy per second
+    /// stays where it was.
+    var ngayogCycleEnergy: Double = 1
+    var ngayogCycleScore: Int = 0
+
+    /// How long the march reference card stays on screen at the start of a
+    /// run. After this the card slot belongs to the interrupts alone, and the
+    /// march is carried by the prompt text — it is the resting state, so a
+    /// card that never changes is just something in front of the camera.
+    var marchCardSeconds: Double = 8
 
     // MARK: - Nge'ed (squat interrupt)
 
@@ -61,7 +76,16 @@ struct RunRules: Sendable {
     /// Taksu meter pays the whole 20; a meter at 40% pays 8.
     var freezeHoldScorePerSecond: Double = 20
 
-    // MARK: - Coins (gathered during the walk)
+    // MARK: - Frangipanis (gathered during the march)
+
+    /// How a flower wilts across its lifetime, from just-spawned to gone.
+    ///
+    /// Picked immediately it is full size and pays full value; left to the
+    /// last moment it is a third of the size and pays a third. This is the
+    /// "grab it fast" pressure — nothing else in the loop rewards urgency.
+    var coinWiltScale: ClosedRange<CGFloat> = 0.34...1.0
+    var coinWiltValue: ClosedRange<CGFloat> = 0.30...1.0
+
 
     /// How many sizes of coin there are. Tier 1 is the smallest and sits
     /// closest in; tier 10 is the biggest, sits furthest out, and pays most.

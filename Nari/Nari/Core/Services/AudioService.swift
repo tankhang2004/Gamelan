@@ -11,9 +11,11 @@ enum SoundEffect: String, Sendable {
     case calibrationComplete
 
     case ngayogCycle
-    /// A foot landing during the walk.
+    /// A foot landing during the march.
     case footStep
-    /// A coin swept up during the walk.
+    /// A frangipani opening somewhere in the room.
+    case coinSpawned
+    /// A frangipani picked before it wilted away.
     case coinCollected
     case squatCue
     case squatHit
@@ -70,7 +72,8 @@ final class NariAudioService: NSObject, AudioServicing {
     private static let effectFilenames: [SoundEffect: String] = [
         .buttonTap: "click-sfx",
         .calibrationComplete: "success-tring",
-        .coinCollected: "frangipani-appear",
+        .coinSpawned: "frangipani-appear",
+        .coinCollected: "sparkle-sfx",
         .squatCue: "squat-cue-appears",
         .squatHit: "squat-mix",
         .squatHeld: "squat-completed-leak",

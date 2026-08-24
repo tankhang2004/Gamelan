@@ -136,18 +136,23 @@ final class GameplayViewModel {
         }
     }
 
-    /// Where each coin currently sits on the camera picture.
+    /// True only for the opening seconds of a run.
     ///
-    /// The engine keeps coins in body space so they follow the player around;
-    /// this puts them back into image coordinates for the view, which is the
-    /// same trip a pose marker makes.
+    /// The march is the resting state, so its reference card would otherwise
+    /// sit there unchanged for the whole session, taking up camera the player
+    /// needs to move in. Showing it once teaches the move, then the card slot
+    /// goes back to the interrupts and the prompt text carries the march.
+    var showsMarchCard: Bool { run.elapsed < rules.marchCardSeconds }
+
+    /// Where each frangipani currently sits on the camera picture, at the size
+    /// and value it has wilted to.
     var coinPlacements: [CoinPlacement] {
         run.coinField.coins.map { coin in
             CoinPlacement(
                 id: coin.id,
-                value: coin.value,
+                value: coin.currentValue(rules),
                 center: coin.position,
-                radius: coin.radius,
+                radius: coin.currentRadius(rules),
                 remainingFraction: coin.remainingFraction
             )
         }
@@ -349,6 +354,7 @@ final class GameplayViewModel {
     private func react(to event: RunEvent) {
         switch event {
         case .ngayogCycle: audio.play(.ngayogCycle)
+        case .coinSpawned: audio.play(.coinSpawned)
         case .coinCollected: audio.play(.coinCollected)
         case .squatCued: audio.play(.squatCue)
         case .squatHit: audio.play(.squatHit)
@@ -380,7 +386,7 @@ final class GameplayViewModel {
         // everything else on screen, so they are heard but never flashed. The
         // coin has its own feedback where it was picked up.
         switch event {
-        case .ngayogCycle, .coinCollected: return
+        case .ngayogCycle, .coinSpawned, .coinCollected: return
         default: break
         }
         lastEvent = event

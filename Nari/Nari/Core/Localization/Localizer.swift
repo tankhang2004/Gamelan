@@ -111,7 +111,7 @@ struct Localizer: Equatable, Sendable {
 
         .calibrationTitle: "KALIBRASI",
         .calibrationInstruction: "Kalibrasi...",
-        .calibrationSearching: "Pastikan seluruh badanmu, dari kepala sampai kaki, masuk dalam frame",
+        .calibrationSearching: "Pastikan seluruh badanmu\nmasuk dalam frame, dari kepala sampai kaki",
 
         .playHoldInstruction: "Tahan pose sampai semua titik hijau",
         .playPause: "JEDA",
@@ -219,7 +219,7 @@ struct Localizer: Equatable, Sendable {
 
         .calibrationTitle: "CALIBRATION",
         .calibrationInstruction: "Calibrating...",
-        .calibrationSearching: "Make sure that you're fully in frame from head to toe",
+        .calibrationSearching: "Make sure that you're fully in frame\nfrom head to toe",
 
         .playHoldInstruction: "Hold the pose until every dot turns green",
         .playPause: "PAUSE",

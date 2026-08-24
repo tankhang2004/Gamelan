@@ -156,6 +156,10 @@ struct GameplayView: View {
                     cueCard
                         .frame(width: proxy.size.width * 0.19)
                         .padding(.vertical, proxy.size.height * 0.16)
+                        // Keyed on the card's own identity rather than on the
+                        // run phase, so the intro march card slides away on its
+                        // timer too, not only when an interrupt swaps it out.
+                        .animation(Theme.Motion.cueDrop, value: cueCardIdentity)
                 }
 
                 VStack {
@@ -197,6 +201,14 @@ struct GameplayView: View {
         }
     }
 
+    /// Which card the slot is showing, so a transition fires whenever it
+    /// changes — including to "nothing", once the intro march card times out.
+    private var cueCardIdentity: String {
+        if let pose = viewModel.cuedPose { return "pose-\(pose.artworkName)" }
+        if viewModel.isSquatCued { return "ngeed" }
+        return viewModel.showsMarchCard ? "march" : "none"
+    }
+
     @ViewBuilder
     private var cueCard: some View {
         if let pose = viewModel.cuedPose {
@@ -213,12 +225,13 @@ struct GameplayView: View {
                 symbolName: "figure.cooldown"
             )
             .transition(.move(edge: .trailing).combined(with: .opacity))
-        } else {
+        } else if viewModel.showsMarchCard {
             PoseCueCard(
                 title: strings[.cueNgayog],
                 artworkName: "PoseNgayog",
                 symbolName: "figure.walk"
             )
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
     }
 
@@ -506,7 +519,7 @@ struct GameplayView: View {
         case .freezeHeldFully: (strings[.flashPerfect], Theme.Palette.ochre)
         case .freezeBrokenEarly: (strings[.flashBroke], Theme.Palette.cream)
         case .freezeFailed: (strings[.flashTooSlow], Theme.Palette.poseWrong)
-        case .ngayogCycle, .coinCollected, .squatCued, .freezeCued, .energyLow, .gameOver: nil
+        case .ngayogCycle, .coinSpawned, .coinCollected, .squatCued, .freezeCued, .energyLow, .gameOver: nil
         }
     }
 
