@@ -32,6 +32,7 @@ struct PopupCard<Content: View>: View {
                     .resizable()
                     .scaledToFill()
             )
+            .compositingGroup()
             .shadow(color: Theme.Palette.ink.opacity(0.45), radius: 26, y: 14)
             .padding(.vertical, 40)
             .transition(.opacity.combined(with: .scale(scale: 0.94)))
@@ -48,9 +49,9 @@ struct PopupCard<Content: View>: View {
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(Theme.Palette.ink)
-                        .padding(12)
+                        .frame(width: 64, height: 64)
                         .background(Circle().fill(Theme.Palette.ink.opacity(0.12)))
                 }
                 .buttonStyle(.plain)

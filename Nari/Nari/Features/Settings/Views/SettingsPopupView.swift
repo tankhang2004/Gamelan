@@ -9,7 +9,7 @@ struct SettingsPopupView: View {
 
     var body: some View {
         PopupCard(title: strings[.settingsTitle], onClose: onClose) {
-            VStack(alignment: .leading, spacing: 44) {
+            VStack(alignment: .leading, spacing: 64) {
                 volumeRow(
                     title: strings[.settingsMusicVolume],
                     symbol: "music.note",
@@ -28,7 +28,7 @@ struct SettingsPopupView: View {
     }
 
     private func volumeRow(title: String, symbol: String, value: Binding<Double>) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label(title, systemImage: symbol)
                     .font(Theme.Fonts.label(28))
@@ -40,18 +40,12 @@ struct SettingsPopupView: View {
                     .foregroundStyle(Theme.Palette.ink.opacity(0.6))
             }
 
-            Slider(value: value, in: 0...1)
-                .tint(Theme.Palette.indigo)
-                .scaleEffect(x: 1, y: 2)
-                .padding(.vertical, 12)
-                .onAppear {
-                    UISlider.appearance().maximumTrackTintColor = UIColor.systemGray3
-                }
+            PaintedSlider(value: value)
         }
     }
 
     private var languageRow: some View {
-        VStack(alignment: .leading, spacing: 26) {
+        VStack(alignment: .leading, spacing: 36) {
             Label(strings[.settingsLanguage], systemImage: "globe")
                 .font(Theme.Fonts.label(28))
                 .foregroundStyle(Theme.Palette.ink)
@@ -66,7 +60,7 @@ struct SettingsPopupView: View {
             .controlSize(.large)
             .onAppear {
                 UISegmentedControl.appearance().setTitleTextAttributes(
-                    [.font: UIFont.systemFont(ofSize: 24, weight: .semibold), .foregroundColor: UIColor.black],
+                    [.font: UIFont.systemFont(ofSize: 24, weight: .regular), .foregroundColor: UIColor.black],
                     for: .normal
                 )
                 UISegmentedControl.appearance().setTitleTextAttributes(

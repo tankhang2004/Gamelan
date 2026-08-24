@@ -8,6 +8,7 @@ struct GameplayView: View {
     let scores: ScoreHistoryStoring
 
     @Environment(\.strings) private var strings
+    @State private var discSpin: Double = 0
 
     var body: some View {
         ZStack {
@@ -141,9 +142,9 @@ struct GameplayView: View {
                         Spacer(minLength: 0)
                         Button(action: { viewModel.pause() }) {
                             Image(systemName: "pause.fill")
-                                .font(.system(size: 22, weight: .bold))
+                                .font(.system(size: 24, weight: .bold))
                                 .foregroundStyle(Theme.Palette.cream)
-                                .padding(16)
+                                .frame(width: 64, height: 64)
                                 .background(Circle().fill(Theme.Palette.indigo))
                                 .overlay(Circle().strokeBorder(Theme.Palette.ink, lineWidth: 4))
                         }
@@ -233,16 +234,20 @@ struct GameplayView: View {
 
         case .calibrating:
             ZStack {
+//                Image("overlay-calib")
+//                    .resizable()
+//                    .scaledToFill()
+//                    .ignoresSafeArea()
+
                 VStack {
-                    banner(
-                        title: strings[.calibrationTitle],
-                        subtitle: viewModel.isBodyVisible
-                            ? strings[.calibrationInstruction]
-                            : strings[.calibrationSearching]
-                    )
+                    Text(calibrationMessage)
+                        .font(Theme.Fonts.body(40))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 48)
                     Spacer()
                 }
-                .padding(.top, 40)
+                .padding(.top, 56)
 
                 StageProgressBorder(progress: viewModel.calibrationProgress, color: Theme.Palette.poseCorrect)
                     .padding(6)
@@ -261,8 +266,6 @@ struct GameplayView: View {
                 isBest: scores.best.map { $0.score <= viewModel.run.score } ?? true,
                 bestScore: scores.best?.score ?? 0,
                 onRetry: { viewModel.retry() },
-                onShare: {},
-                onDownload: {},
                 onMenu: { viewModel.exit() }
             )
 
@@ -271,28 +274,81 @@ struct GameplayView: View {
         }
     }
 
-    /// The green room: the track title and a countdown over a live preview, so
-    /// the player has a moment to get set before scoring starts.
+    /// The green room: a "Game is Starting!" banner that burns off to reveal
+    /// the track card, so the player knows what's about to play before
+    /// scoring starts.
     private func greenRoom(remaining: Double) -> some View {
-        ZStack {
+        // The banner holds for the first two thirds of the countdown, then
+        // crossfades into the track card for what's left.
+        let bannerOpacity = min(1, max(0, (remaining - 1) / 1))
+
+        return ZStack {
             Theme.Palette.ink.opacity(0.45).ignoresSafeArea()
 
-            VStack(spacing: 18) {
-                Text(strings[.greenRoomTrack])
-                    .font(Theme.Fonts.label(26))
-                    .foregroundStyle(Theme.Palette.cream.opacity(0.85))
+            startingBanner
+                .opacity(bannerOpacity)
+                .scaleEffect(0.92 + 0.08 * bannerOpacity)
 
-                Text("\(Int(remaining.rounded(.up)))")
-                    .font(Theme.Fonts.title(150))
-                    .foregroundStyle(Theme.Palette.cream)
-                    .contentTransition(.numericText(countsDown: true))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: Int(remaining.rounded(.up)))
-
-                Text(strings[.greenRoomStart])
-                    .font(Theme.Fonts.title(40))
-                    .foregroundStyle(Theme.Palette.ochre)
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    trackCard
+                        .opacity(1 - bannerOpacity)
+                }
+            }
+            .padding(28)
+        }
+        .animation(.easeInOut(duration: 0.3), value: bannerOpacity)
+        .onAppear {
+            withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: false)) {
+                discSpin = 360
             }
         }
+    }
+
+    private var startingBanner: some View {
+        Text(strings[.startingTitle])
+            .font(Theme.Fonts.title(56))
+            .foregroundStyle(Theme.Palette.indigo)
+            .shadow(color: .white, radius: 0, x: 2, y: 0)
+            .shadow(color: .white, radius: 0, x: -2, y: 0)
+            .shadow(color: .white, radius: 0, x: 0, y: 2)
+            .shadow(color: .white, radius: 0, x: 0, y: -2)
+            .padding(.horizontal, 40)
+            .padding(.vertical, 24)
+            .background(
+                Image("yellow-stroke")
+                    .resizable()
+                    .scaledToFill()
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var trackCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "opticaldisc")
+                .font(.system(size: 24))
+                .foregroundStyle(Theme.Palette.ink)
+                .rotationEffect(.degrees(discSpin))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(strings[.greenRoomTrack])
+                    .font(Theme.Fonts.label(19))
+                    .foregroundStyle(Theme.Palette.ink)
+                Text(strings[.greenRoomArtist])
+                    .font(Theme.Fonts.body(14))
+                    .foregroundStyle(Theme.Palette.ink.opacity(0.7))
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(
+            Image("bg-yellow-2")
+                .resizable()
+                .scaledToFill()
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     /// A short flash naming what just happened, so a hit or a miss is legible
@@ -327,6 +383,11 @@ struct GameplayView: View {
         case .freezeFailed: (strings[.flashTooSlow], Theme.Palette.poseWrong)
         case .ngayogCycle, .coinCollected, .squatCued, .freezeCued, .energyLow, .gameOver: nil
         }
+    }
+
+    /// Head-to-toe framing check, then "Calibrating..." for the whole hold.
+    private var calibrationMessage: String {
+        viewModel.isBodyVisible ? strings[.calibrationInstruction] : strings[.calibrationSearching]
     }
 
     private func banner(title: String, subtitle: String) -> some View {

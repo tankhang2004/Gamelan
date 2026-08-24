@@ -4,6 +4,7 @@ import SwiftUI
 struct PaintedButtonStyle: ButtonStyle {
     var fill: Color = Theme.Palette.indigo
     var textColor: Color = Theme.Palette.cream
+    var borderColor: Color = Theme.Palette.ink
     var height: CGFloat = 84
     var fontSize: CGFloat = 40
 
@@ -21,7 +22,7 @@ struct PaintedButtonStyle: ButtonStyle {
                     .fill(configuration.isPressed ? fill.opacity(0.82) : fill)
                     .shadow(color: Theme.Palette.ink.opacity(0.4), radius: 0, x: 0, y: configuration.isPressed ? 2 : 7)
             }
-            .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: height * 0.06))
+            .overlay(Capsule().strokeBorder(borderColor, lineWidth: height * 0.06))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.7), value: configuration.isPressed)
     }
