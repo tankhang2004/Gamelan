@@ -59,7 +59,7 @@ struct PoseCueCard: View {
         .padding(.vertical, 30)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            Image("backset-yellow")
+            Image("banner-yellow")
                 .resizable()
                 .scaledToFill()
         )

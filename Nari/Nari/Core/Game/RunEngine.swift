@@ -72,7 +72,6 @@ final class RunEngine {
     @ObservationIgnored private var rampsApplied = 0
     /// The score drip during a hold is fractional; whole points are banked from
     /// here so a 7-second hold does not lose a point per second to rounding.
-    @ObservationIgnored private var scoreFraction: Double = 0
     @ObservationIgnored private var hasWarnedLowEnergy = false
     /// How long the hold in progress runs for. Drawn fresh at every cue, so a
     /// player cannot learn one rhythm and stop watching.
@@ -246,6 +245,7 @@ final class RunEngine {
 
         let total = held + delta
         if total >= holdTotal {
+            change(energy: rules.squatHoldEnergy)
             score += rules.squatHoldScore
             events.append(.squatHeldFully)
             returnToNgayog()
@@ -264,7 +264,6 @@ final class RunEngine {
         if input.matchesCuedPose {
             holdTotal = Double.random(in: rules.freezeHoldDuration, using: &generator)
             phase = .freezeHold(side: side, elapsed: 0)
-            scoreFraction = 0
             events.append(.freezeLocked)
             return
         }
@@ -290,23 +289,18 @@ final class RunEngine {
         events: inout [RunEvent]
     ) {
         guard input.matchesCuedPose else {
-            // Breaking early is not punished — the drip simply stops, and
-            // everything banked so far is kept.
+            // Breaking early is not punished, but it pays nothing either: the
+            // agem is banked on completion now, not dripped, so that the
+            // "GREAT AGEM" banner can state one honest number.
             events.append(.freezeBrokenEarly)
             returnToNgayog()
             return
         }
 
-        change(energy: rules.freezeHoldEnergyPerSecond * delta)
-        // A fuller meter pays more per second, so holding Taksu high is worth
-        // something beyond survival.
-        scoreFraction += rules.freezeHoldScorePerSecond * energyFraction * delta
-        let whole = scoreFraction.rounded(.down)
-        score += Int(whole)
-        scoreFraction -= whole
-
         let total = held + delta
         if total >= holdTotal {
+            change(energy: rules.freezeHoldEnergy)
+            score += rules.freezeHoldScore
             events.append(.freezeHeldFully)
             returnToNgayog()
         } else {
@@ -316,7 +310,6 @@ final class RunEngine {
 
     private func returnToNgayog() {
         phase = .ngayog
-        scoreFraction = 0
         holdTotal = 0
         coinField.clear()
         scheduleNextInterrupt()

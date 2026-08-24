@@ -48,8 +48,11 @@ struct RunRules: Sendable {
     /// both ends sit at the design's starting value, so widening it is a
     /// one-line change here.
     var squatHoldDuration: ClosedRange<Double> = 5...5
-    /// Paid once for riding out the whole wave.
-    var squatHoldScore: Int = 15
+    /// Paid once for riding out the whole wave. Matches what the
+    /// "GREAT SQUAT" banner promises — the banner is the receipt, so the
+    /// two have to agree.
+    var squatHoldScore: Int = 5
+    var squatHoldEnergy: Double = 5
     /// Standing up into the wave. Costs the same as never squatting at all.
     var squatBreakEnergy: Double = -8
 
@@ -71,10 +74,12 @@ struct RunRules: Sendable {
     /// the instant end makes the penalty mean something and puts the run back
     /// on the meter.
     var freezeFailEnergy: Double = -20
-    var freezeHoldEnergyPerSecond: Double = 3
-    /// Points per second while holding, before the energy multiplier. A full
-    /// Taksu meter pays the whole 20; a meter at 40% pays 8.
-    var freezeHoldScorePerSecond: Double = 20
+    /// Paid once for holding the whole agem, matching the "GREAT AGEM"
+    /// banner. Flat rather than dripped per second because the banner
+    /// states one number, and a payout that varied with the meter would
+    /// make that number a lie most of the time.
+    var freezeHoldEnergy: Double = 15
+    var freezeHoldScore: Int = 100
 
     // MARK: - Leyak (the dodge)
 
