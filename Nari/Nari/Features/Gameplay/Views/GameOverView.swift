@@ -19,7 +19,6 @@ struct GameOverView: View {
     let onMenu: () -> Void
 
     @Environment(\.strings) private var strings
-    @Environment(\.audio) private var audio
     @State private var landed = false
     @State private var downloadStatus: String?
     @State private var isSharePresented = false
