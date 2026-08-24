@@ -34,6 +34,11 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case tutorialSetup
     case tutorialStart
 
+    // Camera framing
+    case cameraFieldWide
+    case cameraFieldStandard
+    case cameraFieldHint
+
     // Calibration
     case calibrationTitle
     case calibrationInstruction

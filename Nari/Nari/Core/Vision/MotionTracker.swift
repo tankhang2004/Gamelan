@@ -9,12 +9,14 @@ struct MotionTracker {
 
     private var ngayog = NgayogDetector()
     private var squat = SquatDetector()
+    private var steps = StepDetector()
 
     /// Markers for whichever pose is currently cued, empty the rest of the time.
     private(set) var markers: [PoseEvaluation.Marker] = []
-    /// The most recent reading of where the player is, kept so the view can put
-    /// a coin back onto the camera picture in the place the engine put it.
+    /// The most recent reading of where the player is.
     private(set) var bodyFrame: BodyFrame?
+    /// Feet that landed on the most recent frame, for the view to spark at.
+    private(set) var lastSteps: [Step] = []
     /// How many of the nine points are in place, for the "3 of 9" style readout.
     private(set) var matchedPointCount = 0
 
@@ -25,7 +27,8 @@ struct MotionTracker {
     mutating func read(
         _ snapshot: BodyPoseSnapshot,
         delta: Double,
-        cuedPose: PoseDefinition?
+        cuedPose: PoseDefinition?,
+        rules: RunRules
     ) -> RunInput {
         var input = RunInput()
 
@@ -36,11 +39,18 @@ struct MotionTracker {
 
         let frame = BodyFrame(snapshot: snapshot)
         bodyFrame = frame
-        if let frame {
-            input.handPositions = [BodyJoint.leftWrist, .rightWrist].compactMap { joint in
-                snapshot.position(of: joint).map(frame.normalize)
-            }
+
+        // Hands and hips go to the loop in image space, because that is where
+        // the coins are: pinned to the room rather than to the player.
+        input.handPositions = [BodyJoint.leftWrist, .rightWrist].compactMap {
+            snapshot.position(of: $0)
         }
+        input.playerCenter = frame?.hipCenter
+        if snapshot.imageSize.width > 0 {
+            input.frameAspect = snapshot.imageSize.height / snapshot.imageSize.width
+        }
+
+        lastSteps = steps.update(snapshot, delta: delta, rules: rules)
 
         guard let cuedPose else {
             markers = []
@@ -60,8 +70,10 @@ struct MotionTracker {
     mutating func reset() {
         ngayog.reset()
         squat.reset()
+        steps.reset()
         markers = []
         matchedPointCount = 0
         bodyFrame = nil
+        lastSteps = []
     }
 }

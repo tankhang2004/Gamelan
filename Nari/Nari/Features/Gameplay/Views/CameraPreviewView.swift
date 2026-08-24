@@ -11,6 +11,15 @@ struct CameraPreviewView: UIViewRepresentable {
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
         view.previewLayer.session = session
+        // Fill, so the picture reaches every edge the way a camera viewfinder
+        // does rather than sitting between two bars.
+        //
+        // Filling a 1.44 screen with a 4:3 capture costs about 7% of the frame
+        // height, but the format is chosen for vertical reach and the lens is
+        // left uncorrected, so what survives the crop is still far more of the
+        // player than a 16:9 format would have started with. Vision reads the
+        // whole buffer regardless, so the crop only ever hides a little more
+        // than the game is willing to use — never less.
         view.previewLayer.videoGravity = .resizeAspectFill
         if let connection = view.previewLayer.connection, connection.isVideoMirroringSupported {
             connection.automaticallyAdjustsVideoMirroring = false
@@ -48,6 +57,8 @@ struct CameraFrameMapper {
     func point(_ normalized: CGPoint) -> CGPoint {
         guard isUsable else { return .zero }
 
+        // `max`, because the preview crops the frame to fill the screen. The
+        // centring below then trims the overflow evenly from both sides.
         let scale = max(viewSize.width / imageSize.width, viewSize.height / imageSize.height)
         let displayed = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
         let origin = CGPoint(

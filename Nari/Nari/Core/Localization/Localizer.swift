@@ -91,6 +91,10 @@ struct Localizer: Equatable, Sendable {
         .tutorialSetup: "Letakkan iPad di lantai tegak, tekan SIAP, dan mundur.",
         .tutorialStart: "SIAP",
 
+        .cameraFieldWide: "Lebar",
+        .cameraFieldStandard: "Normal",
+        .cameraFieldHint: "Tidak muat? Pakai Lebar.",
+
         .calibrationTitle: "KALIBRASI",
         .calibrationInstruction: "Kalibrasi...",
         .calibrationSearching: "Pastikan seluruh badanmu, dari kepala sampai kaki, masuk dalam frame",
@@ -180,6 +184,10 @@ struct Localizer: Equatable, Sendable {
         .tutorialTitle: "Set Up Your Space",
         .tutorialSetup: "Set your iPad upright on the floor, press READY, and step back",
         .tutorialStart: "READY",
+
+        .cameraFieldWide: "Wide",
+        .cameraFieldStandard: "Normal",
+        .cameraFieldHint: "Not fitting? Try Wide.",
 
         .calibrationTitle: "CALIBRATION",
         .calibrationInstruction: "Calibrating...",

@@ -51,6 +51,7 @@ struct RootView: View {
             source: services.makeBodyPoseSource(),
             audio: services.audio,
             scores: services.scores,
+            settings: services.settings,
             onExit: {
                 // Dropping the view model stops the camera and clears the session.
                 gameplayViewModel = nil

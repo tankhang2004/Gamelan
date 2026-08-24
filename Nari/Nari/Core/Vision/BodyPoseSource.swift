@@ -27,8 +27,19 @@ protocol BodyPoseSource: AnyObject {
     /// Handed the layer showing the camera, so the source can keep the preview
     /// and the analysed frames rotated the same way.
     @MainActor func attachPreview(_ layer: AVCaptureVideoPreviewLayer)
+
+    /// How much of the room to take in. Safe to call while running.
+    func setFieldOfView(_ fieldOfView: CameraFieldOfView)
+
+    /// True when this source can actually offer two different views. False on a
+    /// device whose widest format is already no wider than the standard crop,
+    /// and on the fake dancer, so the toggle can hide itself rather than sit
+    /// there doing nothing.
+    var supportsFieldOfViewChange: Bool { get }
 }
 
 extension BodyPoseSource {
     @MainActor func attachPreview(_ layer: AVCaptureVideoPreviewLayer) {}
+    func setFieldOfView(_ fieldOfView: CameraFieldOfView) {}
+    var supportsFieldOfViewChange: Bool { false }
 }

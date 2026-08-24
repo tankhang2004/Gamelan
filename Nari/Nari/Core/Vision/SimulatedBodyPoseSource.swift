@@ -17,6 +17,31 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
 
     var captureSession: AVCaptureSession? { nil }
 
+    /// The fake dancer honours the framing toggle too, by growing and shrinking
+    /// in the frame the way a real body does when the crop changes. Without it
+    /// the control could not be seen or used anywhere but on a device.
+    var supportsFieldOfViewChange: Bool { true }
+    private let framing = Framing()
+
+    func setFieldOfView(_ fieldOfView: CameraFieldOfView) {
+        framing.scale = fieldOfView == .wide ? 1 : Self.standardCrop
+    }
+
+    /// Roughly the crop a real device applies going from an ultra wide front
+    /// camera to a normal one.
+    private static let standardCrop: CGFloat = 1.45
+
+    /// A box, because the frame generator runs off the main actor.
+    private final class Framing: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value: CGFloat = 1
+
+        var scale: CGFloat {
+            get { lock.withLock { value } }
+            set { lock.withLock { value = newValue } }
+        }
+    }
+
     init() {
         var escapingContinuation: AsyncStream<BodyPoseSnapshot>.Continuation!
         snapshots = AsyncStream(bufferingPolicy: .bufferingNewest(1)) { escapingContinuation = $0 }
@@ -32,10 +57,10 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
         guard task == nil else { return }
         let start = CACurrentMediaTime()
 
-        task = Task { [continuation] in
+        task = Task { [continuation, framing] in
             while !Task.isCancelled {
                 let elapsed = CACurrentMediaTime() - start
-                continuation.yield(Self.snapshot(at: elapsed))
+                continuation.yield(Self.snapshot(at: elapsed, scale: framing.scale))
                 try? await Task.sleep(for: .milliseconds(33))
             }
         }
@@ -60,7 +85,7 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
     private static let agemPeriod: Double = 19
     private static let agemDuration: Double = 9
 
-    private static func snapshot(at elapsed: TimeInterval) -> BodyPoseSnapshot {
+    private static func snapshot(at elapsed: TimeInterval, scale: CGFloat = 1) -> BodyPoseSnapshot {
         // Two seconds of standing still at the top, so calibration can finish
         // before the dancer starts moving around inside the frame.
         let settled = max(elapsed - 2, 0)
@@ -76,6 +101,10 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
             edge: 0.3
         ) * 0.45
         let agem = ramp(phase: settled.truncatingRemainder(dividingBy: agemPeriod), length: agemDuration)
+
+        // A tighter crop does not move the player, it magnifies them about the
+        // middle of the shot — so only the torso unit changes.
+        let torso = torso * scale
 
         func body(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
             CGPoint(x: hipCenter.x + x * torso, y: hipCenter.y + (y + squat) * torso)
@@ -95,6 +124,14 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
         // Knees bend for both the squat and the agem mendak.
         let bend = squat + 0.10 * agem
 
+        // Feet alternate with the head tilt, so the fake dancer is actually
+        // walking rather than sliding around with both soles glued down. Steps
+        // are what `StepDetector` is watching for, so without this the sparks
+        // could not be seen anywhere but on a device.
+        let stride = CGFloat(sin(settled / tiltPeriod * 2 * .pi))
+        let leftLift = max(0, stride) * 0.20
+        let rightLift = max(0, -stride) * 0.20
+
         let positions: [BodyJoint: CGPoint] = [
             .nose: body(tilt, -1.38),
             .neck: body(tilt * 0.4, -1.05),
@@ -108,8 +145,8 @@ final class SimulatedBodyPoseSource: BodyPoseSource {
             .rightHip: body(-0.24, 0),
             .leftKnee: body(0.40, 0.60 - bend * 0.3),
             .rightKnee: body(-0.45, 0.60 - bend * 0.3),
-            .leftAnkle: body(0.45, 1.35 - squat),
-            .rightAnkle: body(-0.40, 1.35 - squat),
+            .leftAnkle: body(0.45, 1.35 - squat - leftLift),
+            .rightAnkle: body(-0.40, 1.35 - squat - rightLift),
         ]
 
         let joints = positions.mapValues { DetectedJoint(position: $0, confidence: 0.92) }

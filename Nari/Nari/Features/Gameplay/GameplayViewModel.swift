@@ -59,6 +59,8 @@ final class GameplayViewModel {
 
     @ObservationIgnored private let poses: PoseProviding
     @ObservationIgnored private let source: BodyPoseSource
+    @ObservationIgnored private let settings: SettingsService
+    @ObservationIgnored private let rules: RunRules = .default
     @ObservationIgnored private let audio: AudioServicing
     @ObservationIgnored private let scores: ScoreHistoryStoring
     @ObservationIgnored private let onExit: () -> Void
@@ -72,12 +74,14 @@ final class GameplayViewModel {
         source: BodyPoseSource,
         audio: AudioServicing,
         scores: ScoreHistoryStoring,
+        settings: SettingsService,
         onExit: @escaping () -> Void
     ) {
         self.poses = poses
         self.source = source
         self.audio = audio
         self.scores = scores
+        self.settings = settings
         self.onExit = onExit
     }
 
@@ -117,19 +121,41 @@ final class GameplayViewModel {
     /// this puts them back into image coordinates for the view, which is the
     /// same trip a pose marker makes.
     var coinPlacements: [CoinPlacement] {
-        guard let frame = tracker.bodyFrame else { return [] }
-        return run.coinField.coins.map { coin in
+        run.coinField.coins.map { coin in
             CoinPlacement(
                 id: coin.id,
                 value: coin.value,
-                center: frame.denormalize(coin.position),
-                radius: coin.radius * frame.torsoLength,
+                center: coin.position,
+                radius: coin.radius,
                 remainingFraction: coin.remainingFraction
             )
         }
     }
 
+    /// Sparks still burning where feet have landed, newest last.
+    private(set) var footSparks: [FootSpark] = []
+
     var clockText: String { RunClock.text(for: run.elapsed) }
+
+    // MARK: - Camera framing
+
+    /// Whether this device can offer a wider view than the standard crop. False
+    /// on the simulator and on any camera with nothing left to widen into, so
+    /// the control can stay off screen rather than lie.
+    var canChangeFieldOfView: Bool { source.supportsFieldOfViewChange }
+
+    var fieldOfView: CameraFieldOfView { settings.settings.cameraFieldOfView }
+
+    /// Swapping framing mid-calibration changes how much of the player is in
+    /// shot, so the hold starts again rather than crediting progress made at a
+    /// different zoom.
+    func toggleFieldOfView() {
+        audio.play(.buttonTap)
+        let next = fieldOfView.toggled
+        settings.setCameraFieldOfView(next)
+        source.setFieldOfView(next)
+        calibrationProgress = 0
+    }
 
     // MARK: - Session control
 
@@ -139,6 +165,7 @@ final class GameplayViewModel {
 
         do {
             try await source.start()
+            source.setFieldOfView(settings.settings.cameraFieldOfView)
         } catch BodyPoseSourceError.permissionDenied {
             phase = .unavailable(.permissionDenied)
             return
@@ -187,6 +214,7 @@ final class GameplayViewModel {
         bodyLostSeconds = 0
         lastTimestamp = nil
         tracker.reset()
+        footSparks.removeAll()
     }
 
     private func consume() {
@@ -262,9 +290,30 @@ final class GameplayViewModel {
         }
         bodyLostSeconds = 0
 
-        let input = tracker.read(snapshot, delta: delta, cuedPose: cuedPose)
+        let input = tracker.read(snapshot, delta: delta, cuedPose: cuedPose, rules: rules)
+        advanceFootSparks(delta: delta)
+
         for event in run.advance(delta: delta, input: input) {
             react(to: event)
+        }
+    }
+
+    /// Ages the sparks out and strikes one wherever a foot just landed.
+    private func advanceFootSparks(delta: Double) {
+        for index in footSparks.indices {
+            footSparks[index].age += delta
+        }
+        footSparks.removeAll { $0.age >= rules.stepSparkSeconds }
+
+        for step in tracker.lastSteps {
+            footSparks.append(
+                FootSpark(
+                    position: step.position,
+                    lifetime: rules.stepSparkSeconds * Double.random(in: 0.82...1.2),
+                    seed: .random(in: UInt64.min...UInt64.max)
+                )
+            )
+            audio.play(.footStep)
         }
     }
 

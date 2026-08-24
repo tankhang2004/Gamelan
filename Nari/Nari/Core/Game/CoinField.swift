@@ -4,15 +4,17 @@ import Foundation
 /// One coin waiting to be swept up during the walk.
 struct Coin: Identifiable, Sendable {
     let id: UUID
-    /// 1 up to `RunRules.coinTierCount`. A higher tier sits further out from
-    /// the body, is drawn bigger, and pays more.
+    /// 1 up to `RunRules.coinTierCount`. A coin that spawned further from the
+    /// player is a higher tier: drawn bigger, worth more, and out longer.
     let tier: Int
-    /// Body space: the hip centre is the origin and one unit is a torso length.
-    /// Placing coins here rather than on the screen is what makes them land in
-    /// the same place relative to the player whether they are tall or small,
-    /// close to the iPad or far from it.
+    /// Normalized image space, the same coordinates a pose marker uses.
+    ///
+    /// Pinned to the picture rather than to the player on purpose. A coin held
+    /// in body space travels with the hips, so walking towards one would push
+    /// it away at exactly the speed you approached — the one thing a coin meant
+    /// to be chased must not do.
     let position: CGPoint
-    /// Radius in torso lengths, so it scales with the player like the position.
+    /// Radius as a fraction of the frame width.
     let radius: CGFloat
     let value: Int
     let lifetime: Double
@@ -22,19 +24,22 @@ struct Coin: Identifiable, Sendable {
     var remainingFraction: Double { max(0, min(1, remaining / lifetime)) }
 }
 
-/// Scatters coins around the player while they walk, ages them out, and reports
-/// the ones a hand reached in time.
-///
-/// Everything here is in body space and knows nothing about the screen; the
-/// view maps a coin onto the camera picture the same way it maps a pose marker.
+/// Scatters coins across the room while the player walks, ages them out, and
+/// reports the ones a hand reached in time.
 struct CoinField {
     private(set) var coins: [Coin] = []
     private var timeToNextSpawn: Double = 0
 
     /// Advances by one frame and returns the value of every coin collected.
+    ///
+    /// `hands` and `player` are in normalized image space; `frameAspect` is the
+    /// frame's height over its width, which turns a vertical gap into the same
+    /// units as a horizontal one so a "distance" means the same in both.
     mutating func advance(
         delta: Double,
         hands: [CGPoint],
+        player: CGPoint?,
+        frameAspect: CGFloat,
         rules: RunRules,
         generator: inout SeededGenerator
     ) -> [Int] {
@@ -44,7 +49,7 @@ struct CoinField {
         // be caught rather than vanishing out from under a hand.
         coins.removeAll { coin in
             let touched = hands.contains { hand in
-                hypot(hand.x - coin.position.x, hand.y - coin.position.y) <= coin.radius
+                Self.distance(hand, coin.position, frameAspect) <= coin.radius
             }
             guard touched else { return false }
             collected.append(coin.value)
@@ -60,7 +65,8 @@ struct CoinField {
         if timeToNextSpawn <= 0 {
             timeToNextSpawn = Double.random(in: rules.coinSpawnInterval, using: &generator)
             if coins.count < rules.maximumCoinsOnScreen,
-               let coin = spawn(rules: rules, generator: &generator) {
+               let player,
+               let coin = spawn(near: player, frameAspect: frameAspect, rules: rules, generator: &generator) {
                 coins.append(coin)
             }
         }
@@ -75,27 +81,47 @@ struct CoinField {
         timeToNextSpawn = 0
     }
 
-    private func spawn(rules: RunRules, generator: inout SeededGenerator) -> Coin? {
-        let tier = Int.random(in: 1...rules.coinTierCount, using: &generator)
-        let step = rules.coinTierCount > 1
-            ? CGFloat(tier - 1) / CGFloat(rules.coinTierCount - 1)
-            : 0
-        let distance = Self.lerp(rules.coinDistanceRange, step)
-        let radius = Self.lerp(rules.coinRadiusRange, step)
+    private func spawn(
+        near player: CGPoint,
+        frameAspect: CGFloat,
+        rules: RunRules,
+        generator: inout SeededGenerator
+    ) -> Coin? {
+        let area = rules.coinPlayArea
+        let reach = rules.coinPlayerDistanceRange
 
-        // A few attempts at a spot that is not already occupied. Giving up and
-        // spawning nothing is fine — the next spawn comes along in a second.
-        for _ in 0..<12 {
-            // The upper half only: a coin below the hips cannot be reached
-            // without dropping out of the walk, and a squat is a different cue.
-            let angle = CGFloat.random(in: 0.08...0.92, using: &generator) * .pi
-            let position = CGPoint(x: cos(angle) * distance, y: -sin(angle) * distance)
+        // Points are drawn from the whole frame and rejected, rather than
+        // placed at a chosen angle and distance. Sampling the frame is what
+        // puts coins in the corners: aiming at a distance from the player would
+        // trace a circle around them and mostly miss the corners entirely.
+        for _ in 0..<24 {
+            let position = CGPoint(
+                x: CGFloat.random(in: area.minX...area.maxX, using: &generator),
+                y: CGFloat.random(in: area.minY...area.maxY, using: &generator)
+            )
+
+            let gap = Self.distance(position, player, frameAspect)
+            guard reach.contains(gap) else { continue }
+
+            // How far out it landed decides everything else about it, so the
+            // coins worth chasing are visibly the ones across the room.
+            let step = (gap - reach.lowerBound) / (reach.upperBound - reach.lowerBound)
+            let tier = max(1, min(rules.coinTierCount, Int(step * CGFloat(rules.coinTierCount)) + 1))
+            let tierStep = rules.coinTierCount > 1
+                ? CGFloat(tier - 1) / CGFloat(rules.coinTierCount - 1)
+                : 0
+            let radius = Self.lerp(rules.coinRadiusRange, tierStep)
 
             let isClear = coins.allSatisfy { other in
-                let gap = hypot(other.position.x - position.x, other.position.y - position.y)
-                return gap >= other.radius + radius + rules.coinMinimumSeparation
+                Self.distance(other.position, position, frameAspect)
+                    >= other.radius + radius + rules.coinMinimumSeparation
             }
             guard isClear else { continue }
+
+            let lifetime = Double(Self.lerp(
+                CGFloat(rules.coinLifetime.lowerBound)...CGFloat(rules.coinLifetime.upperBound),
+                tierStep
+            ))
 
             return Coin(
                 id: UUID(),
@@ -103,11 +129,18 @@ struct CoinField {
                 position: position,
                 radius: radius,
                 value: tier * rules.coinValueStep,
-                lifetime: rules.coinLifetime,
-                remaining: rules.coinLifetime
+                lifetime: lifetime,
+                remaining: lifetime
             )
         }
         return nil
+    }
+
+    /// Distance in frame widths. The vertical gap is scaled by the frame's
+    /// shape first, so a coin "a third of the way away" is the same walk
+    /// whichever direction it lies in.
+    private static func distance(_ a: CGPoint, _ b: CGPoint, _ frameAspect: CGFloat) -> CGFloat {
+        hypot(a.x - b.x, (a.y - b.y) * frameAspect)
     }
 
     private static func lerp(_ range: ClosedRange<CGFloat>, _ step: CGFloat) -> CGFloat {
