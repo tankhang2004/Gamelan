@@ -10,6 +10,8 @@ struct PopupCard<Content: View>: View {
     /// Fixed so the tear in the paper does not change shape between popups.
     private let paperSeed: UInt64 = 41
 
+    @Environment(\.audio) private var audio
+
     var body: some View {
         ZStack {
             Theme.Palette.scrim
@@ -47,7 +49,10 @@ struct PopupCard<Content: View>: View {
 
             HStack {
                 Spacer()
-                Button(action: onClose) {
+                Button(action: {
+                    audio.play(.buttonTap)
+                    onClose()
+                }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(Theme.Palette.ink)
@@ -66,6 +71,8 @@ struct PopupCard<Content: View>: View {
 /// A smaller painted pill for popup actions, so a popup does not have to reach
 /// for the full-size menu button.
 struct PopupActionButtonStyle: ButtonStyle {
+    @Environment(\.audio) private var audio
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Theme.Fonts.label(32))
@@ -74,6 +81,9 @@ struct PopupActionButtonStyle: ButtonStyle {
             .padding(.vertical, 13)
             .background(Capsule().fill(Theme.Palette.indigo.opacity(configuration.isPressed ? 0.8 : 1)))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed { audio.play(.buttonTap) }
+            }
     }
 }
 

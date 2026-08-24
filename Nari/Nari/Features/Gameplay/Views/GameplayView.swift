@@ -8,6 +8,7 @@ struct GameplayView: View {
     let scores: ScoreHistoryStoring
 
     @Environment(\.strings) private var strings
+    @Environment(\.audio) private var audio
     @State private var discSpin: Double = 0
 
     var body: some View {
@@ -206,7 +207,7 @@ struct GameplayView: View {
     private var fieldOfViewControl: some View {
         VStack(spacing: 10) {
             Text(strings[.cameraFieldHint])
-                .font(Theme.Fonts.body(17))
+                .font(Theme.Fonts.body(24))
                 .foregroundStyle(Theme.Palette.cream.opacity(0.9))
                 .shadow(color: Theme.Palette.ink, radius: 0, x: 2, y: 2)
 
@@ -220,12 +221,12 @@ struct GameplayView: View {
                     } label: {
                         VStack(spacing: 1) {
                             Text(option.shortLabel)
-                                .font(Theme.Fonts.readout(23))
+                                .font(Theme.Fonts.readout(30))
                             Text(strings[option.labelKey])
-                                .font(Theme.Fonts.body(14))
+                                .font(Theme.Fonts.body(20))
                         }
                         .foregroundStyle(isOn ? Theme.Palette.ink : Theme.Palette.cream)
-                        .frame(width: 104, height: 62)
+                        .frame(width: 130, height: 78)
                         .background(
                             Capsule().fill(isOn ? Theme.Palette.ochre : Color.clear)
                         )
@@ -300,8 +301,9 @@ struct GameplayView: View {
 
                 VStack {
                     Text(calibrationMessage)
-                        .font(Theme.Fonts.body(40))
+                        .font(.system(size: 56, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
+                        .outlined(color: Theme.Palette.ink)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 48)
                     Spacer()
@@ -321,6 +323,16 @@ struct GameplayView: View {
                             .padding(.bottom, 46)
                     }
                 }
+
+                VStack {
+                    HStack {
+                        PaintedIconButton(symbol: "chevron.left", diameter: 64, action: { viewModel.exit() })
+                            .offset(x: 40, y: 24)
+                        Spacer()
+                    }
+                    Spacer()
+                }
+                .padding(28)
             }
 
         case .starting(let remaining):
@@ -381,10 +393,7 @@ struct GameplayView: View {
         Text(strings[.startingTitle])
             .font(Theme.Fonts.title(56))
             .foregroundStyle(Theme.Palette.indigo)
-            .shadow(color: .white, radius: 0, x: 2, y: 0)
-            .shadow(color: .white, radius: 0, x: -2, y: 0)
-            .shadow(color: .white, radius: 0, x: 0, y: 2)
-            .shadow(color: .white, radius: 0, x: 0, y: -2)
+            .outlined(color: .white)
             .padding(.horizontal, 40)
             .padding(.vertical, 24)
             .background(
@@ -488,7 +497,10 @@ struct GameplayView: View {
                 Button(strings[.playResume]) { viewModel.resume() }
                     .buttonStyle(PopupActionButtonStyle())
 
-                Button(strings[.playExit]) { viewModel.exit() }
+                Button(strings[.playExit]) {
+                    audio.play(.buttonTap)
+                    viewModel.exit()
+                }
                     .buttonStyle(.plain)
                     .font(Theme.Fonts.label(19))
                     .foregroundStyle(Theme.Palette.cream.opacity(0.85))
@@ -528,7 +540,10 @@ struct GameplayView: View {
                         .buttonStyle(PopupActionButtonStyle())
                     }
 
-                    Button(strings[.gameplayBack]) { viewModel.exit() }
+                    Button(strings[.gameplayBack]) {
+                        audio.play(.buttonTap)
+                        viewModel.exit()
+                    }
                         .buttonStyle(.plain)
                         .font(Theme.Fonts.label(19))
                         .foregroundStyle(Theme.Palette.ink.opacity(0.75))

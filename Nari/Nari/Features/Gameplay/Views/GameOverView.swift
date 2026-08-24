@@ -13,6 +13,7 @@ struct GameOverView: View {
     let onMenu: () -> Void
 
     @Environment(\.strings) private var strings
+    @Environment(\.audio) private var audio
     @State private var landed = false
     @State private var downloadStatus: String?
 
@@ -61,7 +62,10 @@ struct GameOverView: View {
     // MARK: - Close
 
     private var closeButton: some View {
-        Button(action: onMenu) {
+        Button(action: {
+            audio.play(.buttonTap)
+            onMenu()
+        }) {
             Image(systemName: "xmark")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(Theme.Palette.ink)
@@ -98,10 +102,7 @@ struct GameOverView: View {
         Text(strings[.gameOverYourScore])
             .font(Theme.Fonts.title(42))
             .foregroundStyle(Theme.Palette.indigo)
-            .shadow(color: .white, radius: 0, x: 2, y: 0)
-            .shadow(color: .white, radius: 0, x: -2, y: 0)
-            .shadow(color: .white, radius: 0, x: 0, y: 2)
-            .shadow(color: .white, radius: 0, x: 0, y: -2)
+            .outlined(color: .white)
     }
  
     private var scoreBadge: some View {

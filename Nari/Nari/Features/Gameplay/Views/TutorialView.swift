@@ -7,6 +7,7 @@ struct TutorialView: View {
     let onBack: () -> Void
 
     @Environment(\.strings) private var strings
+    @Environment(\.audio) private var audio
     @State private var stepIndex = 0
 
     private let steps = TutorialStep.allCases
@@ -45,7 +46,10 @@ struct TutorialView: View {
                 .frame(height: 100)
                 .padding(.horizontal, 24)
 
-                Button(action: onStart) {
+                Button(action: {
+                    audio.play(.buttonTap)
+                    onStart()
+                }) {
                     Text(strings[.tutorialStart])
                         .font(Theme.Fonts.label(34))
                         .tracking(34 * 0.05)

@@ -84,7 +84,6 @@ final class MainMenuViewModel {
 
     func select(_ item: MainMenuItem) {
         guard !isTransitioning else { return }
-        audio.play(.buttonTap)
 
         switch item {
         case .settings: present(.settings)

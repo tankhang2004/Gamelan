@@ -8,6 +8,8 @@ struct PaintedButtonStyle: ButtonStyle {
     var height: CGFloat = 84
     var fontSize: CGFloat = 40
 
+    @Environment(\.audio) private var audio
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Theme.Fonts.label(fontSize))
@@ -25,6 +27,9 @@ struct PaintedButtonStyle: ButtonStyle {
             .overlay(Capsule().strokeBorder(borderColor, lineWidth: height * 0.06))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.7), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed { audio.play(.buttonTap) }
+            }
     }
 }
 
@@ -36,8 +41,13 @@ struct PaintedIconButton: View {
     var fill: Color = Theme.Palette.cueOrange
     let action: () -> Void
 
+    @Environment(\.audio) private var audio
+
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            audio.play(.buttonTap)
+            action()
+        }) {
             Image(systemName: symbol)
                 .font(.system(size: diameter * 0.6, weight: .semibold))
                 .foregroundStyle(.white)

@@ -32,6 +32,7 @@ struct RootView: View {
             }
         }
         .environment(\.strings, services.settings.localizer)
+        .environment(\.audio, services.audio)
         .animation(Theme.Motion.screenChange, value: router.screen)
         .ignoresSafeArea()
         .task {

@@ -68,6 +68,7 @@ final class NariAudioService: NSObject, AudioServicing {
     /// Maps a cue to the file that plays for it. Cues left out here have no
     /// asset yet and stay silent — safe by design, not a bug.
     private static let effectFilenames: [SoundEffect: String] = [
+        .buttonTap: "click-sfx",
         .calibrationComplete: "success-tring",
         .coinCollected: "frangipani-appear",
         .squatCue: "squat-cue-appears",

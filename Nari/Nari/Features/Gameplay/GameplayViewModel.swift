@@ -189,14 +189,12 @@ final class GameplayViewModel {
 
     func resume() {
         guard phase == .paused else { return }
-        audio.play(.buttonTap)
         // Come back through calibration so the player has time to get set again.
         beginCalibration()
     }
 
     /// Starts a whole new run from the game over screen.
     func retry() {
-        audio.play(.buttonTap)
         run = RunEngine()
         tracker.reset()
         lastEvent = nil
