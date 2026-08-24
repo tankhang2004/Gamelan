@@ -10,9 +10,14 @@ struct StaticCreditsRepository: CreditsProviding {
     func sections(using strings: Localizer) -> [CreditSection] {
         [
             CreditSection(
-                id: "thanks",
-                title: strings[.creditsThanksTitle],
-                lines: [strings[.creditsThanksBody]]
+                id: "about",
+                title: strings[.creditsAboutTitle],
+                lines: [strings[.creditsAboutBody]]
+            ),
+            CreditSection(
+                id: "credits",
+                title: strings[.creditsCreditsTitle],
+                lines: [strings[.creditsCreditsBody]]
             ),
         ]
     }

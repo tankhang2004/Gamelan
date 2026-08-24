@@ -29,8 +29,9 @@ struct Localizer: Equatable, Sendable {
         .menuScores: "SKOR",
         .tagline: "Latihan tubuh untuk penari Bali cilik",
 
-        .greenRoomTrack: "Gamelan — Tabuh Pertama",
-        .greenRoomStart: "SIAP!",
+        .startingTitle: "Permainan Segera Dimulai!",
+        .greenRoomTrack: "Ginanti",
+        .greenRoomArtist: "oleh Mekar Bhuana",
 
         .cueWalk: "NGAYOG",
         .cueSquat: "NGE'ED!",
@@ -54,7 +55,10 @@ struct Localizer: Equatable, Sendable {
         .gameOverNewHighScore: "Rekor Baru!",
         .gameOverBestScoreLabel: "Skor terbaik",
         .gameOverShare: "Bagikan",
+        .gameOverShareMessage: "Skorku %d di Yuk, Nari!",
         .gameOverDownload: "Unduh",
+        .gameOverDownloadSaved: "Tersimpan ke galeri!",
+        .gameOverDownloadDenied: "Tidak bisa akses galeri foto",
 
         .scoresTitle: "Riwayat Skor",
         .scoresEmpty: "Belum ada permainan.\nMain dulu, yuk!",
@@ -66,11 +70,18 @@ struct Localizer: Equatable, Sendable {
         .settingsDone: "Selesai",
 
         .creditsTitle: "Kredit",
-        .creditsThanksTitle: "Terima Kasih",
-        .creditsThanksBody: """
-        Permainan ini terinspirasi oleh Mekar Bhuana Centre, pusat seni dan \
-        budaya Bali yang telah membagikan ilmu dan semangatnya dalam \
-        melestarikan tari Bali. Kunjungi mereka di [mekarbhuana.com](https://mekarbhuana.com).
+        .creditsAboutTitle: "Tentang",
+        .creditsAboutBody: """
+        Yuk, Nari! adalah permainan olahraga yang terinspirasi dari tari Bali, \
+        mengubah gerakan dasar tarian tradisional ini jadi momen seru yang \
+        bikin berkeringat.
+        """,
+        .creditsCreditsTitle: "Kredit",
+        .creditsCreditsBody: """
+        Pengetahuan koreografi dan musik gamelan disediakan oleh Mekar Bhuana.
+
+        Instagram: @mekarbhuana_centre
+        Website: [balimusicanddance.com](https://balimusicanddance.com)
         """,
         .gameplayPlayTitle: "Mode Main",
         .gameplayPlaceholderBody: "Layar permainan masih kosong. Alur gerak akan dipasang di sini.",
@@ -81,9 +92,8 @@ struct Localizer: Equatable, Sendable {
         .tutorialStart: "SIAP",
 
         .calibrationTitle: "KALIBRASI",
-        .calibrationInstruction: "Berdiri tegak, biarkan seluruh badan terlihat",
-        .calibrationSearching: "Mencari badanmu...",
-        .calibrationDone: "Siap!",
+        .calibrationInstruction: "Kalibrasi...",
+        .calibrationSearching: "Pastikan seluruh badanmu, dari kepala sampai kaki, masuk dalam frame",
 
         .playHoldInstruction: "Tahan pose sampai semua titik hijau",
         .playPause: "JEDA",
@@ -109,8 +119,9 @@ struct Localizer: Equatable, Sendable {
         .menuScores: "SCORES",
         .tagline: "Body training for young Balinese dancers",
 
-        .greenRoomTrack: "Gamelan — First Tabuh",
-        .greenRoomStart: "GAME START",
+        .startingTitle: "Game is Starting!",
+        .greenRoomTrack: "Ginanti",
+        .greenRoomArtist: "by Mekar Bhuana",
 
         .cueWalk: "WALK",
         .cueSquat: "SQUAT!",
@@ -134,7 +145,10 @@ struct Localizer: Equatable, Sendable {
         .gameOverNewHighScore: "New High Score!",
         .gameOverBestScoreLabel: "Best score",
         .gameOverShare: "Share",
+        .gameOverShareMessage: "I scored %d in Yuk, Nari!",
         .gameOverDownload: "Download",
+        .gameOverDownloadSaved: "Saved to your photos!",
+        .gameOverDownloadDenied: "Couldn't access your photo library",
 
         .scoresTitle: "Score History",
         .scoresEmpty: "No runs yet.\nGo dance one!",
@@ -146,11 +160,18 @@ struct Localizer: Equatable, Sendable {
         .settingsDone: "Done",
 
         .creditsTitle: "Credits",
-        .creditsThanksTitle: "Thank You",
-        .creditsThanksBody: """
-        This game was inspired by Mekar Bhuana Centre, a Balinese arts and \
-        culture center that generously shared its knowledge and passion for \
-        preserving Balinese dance. Visit them at [mekarbhuana.com](https://mekarbhuana.com).
+        .creditsAboutTitle: "About",
+        .creditsAboutBody: """
+        Yuk, Nari! is an exercise game inspired by Balinese dance, channeling \
+        the traditional art form's most basic movements into fun, \
+        sweat-breaking moments.
+        """,
+        .creditsCreditsTitle: "Credits",
+        .creditsCreditsBody: """
+        Choreography knowledge and gamelan music provided by Mekar Bhuana.
+
+        Instagram: @mekarbhuana_centre
+        Website: [balimusicanddance.com](https://balimusicanddance.com)
         """,
         .gameplayPlayTitle: "Play Mode",
         .gameplayPlaceholderBody: "The gameplay screen is still empty. Movement flow goes here.",
@@ -161,9 +182,8 @@ struct Localizer: Equatable, Sendable {
         .tutorialStart: "READY",
 
         .calibrationTitle: "CALIBRATION",
-        .calibrationInstruction: "Stand tall and let your whole body show",
-        .calibrationSearching: "Looking for you...",
-        .calibrationDone: "Ready!",
+        .calibrationInstruction: "Calibrating...",
+        .calibrationSearching: "Make sure that you're fully in frame from head to toe",
 
         .playHoldInstruction: "Hold the pose until every dot turns green",
         .playPause: "PAUSE",

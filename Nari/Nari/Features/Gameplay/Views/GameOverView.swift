@@ -1,3 +1,4 @@
+import Photos
 import SwiftUI
 
 /// The end of a run: score on the left, a playback of the run on the right,
@@ -9,12 +10,15 @@ struct GameOverView: View {
     let isBest: Bool
     let bestScore: Int
     let onRetry: () -> Void
-    let onShare: () -> Void
-    let onDownload: () -> Void
     let onMenu: () -> Void
 
     @Environment(\.strings) private var strings
     @State private var landed = false
+    @State private var downloadStatus: String?
+
+    private var shareMessage: String {
+        String(format: strings[.gameOverShareMessage], score)
+    }
 
     var body: some View {
         ZStack {
@@ -24,19 +28,26 @@ struct GameOverView: View {
             VStack {
                 HStack {
                     Spacer()
-                    PaintedIconButton(symbol: "xmark", diameter: 64, action: onMenu)
+                    closeButton
                 }
 
                 Spacer()
 
                 HStack(alignment: .center, spacing: 48) {
-                    scoreSection
+                    scoreCard
                     videoPlaybackPlaceholder
                 }
 
                 Spacer()
 
-                actionRow
+                VStack(spacing: 10) {
+                    actionRow
+                    if let downloadStatus {
+                        Text(downloadStatus)
+                            .font(Theme.Fonts.body(15))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                }
             }
             .padding(32)
             .opacity(landed ? 1 : 0)
@@ -47,34 +58,65 @@ struct GameOverView: View {
         }
     }
 
+    // MARK: - Close
+
+    private var closeButton: some View {
+        Button(action: onMenu) {
+            Image(systemName: "xmark")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(Theme.Palette.ink)
+                .frame(width: 64, height: 64)
+                .background(Circle().fill(.white))
+                .shadow(color: Theme.Palette.ink.opacity(0.3), radius: 0, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Score
 
-    private var scoreSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(strings[.gameOverYourScore])
-                .font(Theme.Fonts.title(44))
-                .foregroundStyle(Theme.Palette.indigo)
-
-            Text("\(score)")
-                .font(Theme.Fonts.readout(56))
-                .foregroundStyle(Theme.Palette.ink)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
-                .background(
-                    Image("bg-yellow-2")
-                        .resizable()
-                        .frame(width: 300, height: 120)
-//                    BrushSwatchShape(seed: 27, roughness: 0.08)
-//                        .fill(Theme.Palette.ochre)
+    private var scoreCard: some View {
+        ZStack(alignment: .topLeading) {
+            Image("bg-white")
+                .resizable()
+                .frame(width: 340, height: 150)
+                .overlay(
+                    Text(score.formatted())
+                        .font(.system(size: 56, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Theme.Palette.ink)
                 )
 
-            Text(isBest
-                 ? strings[.gameOverNewHighScore]
-                 : "\(strings[.gameOverBestScoreLabel]) = \(bestScore)")
-                .font(Theme.Fonts.body(18))
-                .foregroundStyle(.white)
-                .padding(.top, 4)
+            outlinedTitle
+                .offset(x: 6, y: -28)
+
+            scoreBadge
+                .offset(x: 22, y: 148)
         }
+        .padding(.bottom, 30)
+    }
+
+    private var outlinedTitle: some View {
+        Text(strings[.gameOverYourScore])
+            .font(Theme.Fonts.title(42))
+            .foregroundStyle(Theme.Palette.indigo)
+            .shadow(color: .white, radius: 0, x: 2, y: 0)
+            .shadow(color: .white, radius: 0, x: -2, y: 0)
+            .shadow(color: .white, radius: 0, x: 0, y: 2)
+            .shadow(color: .white, radius: 0, x: 0, y: -2)
+    }
+ 
+    private var scoreBadge: some View {
+        Text(isBest
+             ? strings[.gameOverNewHighScore]
+             : "\(strings[.gameOverBestScoreLabel]): \(bestScore)")
+            .font(Theme.Fonts.label(36))
+            .tracking(0.5)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 36)
+            .padding(.vertical, 22)
+            .background(
+                Image("bg-green")
+                    .resizable()
+            )
     }
 
     // MARK: - Playback
@@ -91,7 +133,7 @@ struct GameOverView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(.white.opacity(0.25), lineWidth: 2)
+                    .strokeBorder(.white, lineWidth: 3)
             )
     }
 
@@ -99,29 +141,67 @@ struct GameOverView: View {
 
     private var actionRow: some View {
         HStack(spacing: 20) {
-            Button(strings[.gameOverRetry], action: onRetry)
-                .buttonStyle(PaintedButtonStyle(height: 76, fontSize: 30))
+            Button(action: onRetry) {
+                Label(strings[.gameOverRetry], systemImage: "arrow.counterclockwise")
+            }
+            .buttonStyle(pillStyle)
 
-            PaintedIconButton(symbol: "square.and.arrow.up", diameter: 64, action: onShare)
+            ShareLink(item: shareMessage) {
+                Label(strings[.gameOverShare], systemImage: "square.and.arrow.up")
+            }
+            .buttonStyle(pillStyle)
 
-            PaintedIconButton(symbol: "arrow.down.circle", diameter: 64, action: onDownload)
+            Button(action: saveScoreCard) {
+                Label(strings[.gameOverDownload], systemImage: "arrow.down.to.line")
+            }
+            .buttonStyle(pillStyle)
+        }
+    }
+
+    private var pillStyle: PaintedButtonStyle {
+        PaintedButtonStyle(fill: Theme.Palette.cueOrange, textColor: .white, borderColor: .white, height: 72, fontSize: 24)
+    }
+
+    // MARK: - Download
+
+    @MainActor
+    private func saveScoreCard() {
+        let renderer = ImageRenderer(content: scoreCard.padding(20).background(Theme.Palette.ochreLight))
+        renderer.scale = UIScreen.main.scale
+        guard let image = renderer.uiImage else { return }
+
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else {
+                Task { @MainActor in showDownloadStatus(strings[.gameOverDownloadDenied]) }
+                return
+            }
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            } completionHandler: { success, _ in
+                Task { @MainActor in
+                    showDownloadStatus(success ? strings[.gameOverDownloadSaved] : strings[.gameOverDownloadDenied])
+                }
+            }
+        }
+    }
+
+    private func showDownloadStatus(_ text: String) {
+        withAnimation { downloadStatus = text }
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation { downloadStatus = nil }
         }
     }
 }
 
 #Preview {
     ZStack {
-        Image("bg-yellow")
-                    .resizable()
-                    .scaledToFill()
         GameOverView(
             score: 21983,
             survived: "01:45",
             isBest: true,
             bestScore: 18420,
             onRetry: {},
-            onShare: {},
-            onDownload: {},
             onMenu: {}
         )
     }

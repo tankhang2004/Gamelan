@@ -60,7 +60,7 @@ struct TutorialView: View {
 
             VStack {
                 HStack {
-                    PaintedIconButton(symbol: "chevron.left", diameter: 78, action: onBack)
+                    PaintedIconButton(symbol: "chevron.left", diameter: 64, action: onBack)
                         .offset(x: 40, y:24)
                     Spacer()
                 }
