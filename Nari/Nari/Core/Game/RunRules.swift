@@ -76,6 +76,28 @@ struct RunRules: Sendable {
     /// Taksu meter pays the whole 20; a meter at 40% pays 8.
     var freezeHoldScorePerSecond: Double = 20
 
+    // MARK: - Leyak (the dodge)
+
+    /// How long the Leyak takes to come down the room.
+    ///
+    /// Long enough to see it, read where it is falling, and walk out of the
+    /// way — this is the one move in the game that cannot be survived by
+    /// standing still, so the window has to be generous.
+    var leyakDiveSeconds: Double = 3.4
+    /// Half the width of the killing column, in frame widths. Narrower than
+    /// the artwork, which is mostly hair: only the face actually strikes.
+    var leyakColumnHalfWidth: CGFloat = 0.085
+    /// The fraction of the dive after which contact is lethal, so a player
+    /// standing under it at the moment it appears still has time to move.
+    var leyakStrikeStart: Double = 0.42
+    /// Paid for getting out of the way.
+    var leyakDodgedScore: Int = 40
+    var leyakDodgedEnergy: Double = 5
+    /// Chance the shared interrupt timer picks the Leyak.
+    var leyakChance: Double = 0.20
+    /// No Leyak this early into a run — same reasoning as `freezeLockout`.
+    var leyakLockout: Double = 20
+
     // MARK: - Frangipanis (gathered during the march)
 
     /// How a flower wilts across its lifetime, from just-spawned to gone.
@@ -125,9 +147,9 @@ struct RunRules: Sendable {
     /// at the top rather than a value tuned to one iPad.
     var coinPlayArea = CGRect(x: 0.12, y: 0.22, width: 0.68, height: 0.70)
     /// Drawn radius of the smallest and largest coin, in frame widths.
-    var coinRadiusRange: ClosedRange<CGFloat> = 0.030...0.070
+    var coinRadiusRange: ClosedRange<CGFloat> = 0.055...0.115
     /// Clear space kept between two coins, so they never overlap on screen.
-    var coinMinimumSeparation: CGFloat = 0.04
+    var coinMinimumSeparation: CGFloat = 0.05
 
     // MARK: - Footwork
 

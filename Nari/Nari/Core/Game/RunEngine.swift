@@ -52,6 +52,7 @@ final class RunEngine {
         case .squatHold(let held): holdTotal > 0 ? held / holdTotal : 0
         case .freezeGrace(_, let remaining): 1 - remaining / rules.freezeGracePeriod
         case .freezeHold(_, let held): holdTotal > 0 ? held / holdTotal : 0
+        case .leyakDive(_, let progress): progress
         case .ngayog, .gameOver: 0
         }
     }
@@ -110,6 +111,8 @@ final class RunEngine {
             advanceFreezeGrace(side: side, remaining: remaining, delta: delta, input: input, events: &events)
         case .freezeHold(let side, let held):
             advanceFreezeHold(side: side, held: held, delta: delta, input: input, events: &events)
+        case .leyakDive(let column, let progress):
+            advanceLeyakDive(column: column, progress: progress, delta: delta, input: input, events: &events)
         case .gameOver:
             break
         }
@@ -145,19 +148,59 @@ final class RunEngine {
         timeToNextInterrupt -= delta
         guard timeToNextInterrupt <= 0 else { return }
 
-        // Rolled before the lockout is checked, so an early Freeze is suppressed
-        // rather than re-rolled into a squat that was never drawn.
-        let rolledFreeze = Double.random(in: 0..<1, using: &generator) < freezeChance
+        // Rolled before the lockouts are checked, so an early Freeze or Leyak
+        // is suppressed rather than re-rolled into a squat that was never
+        // drawn.
+        let roll = Double.random(in: 0..<1, using: &generator)
+        let rolledLeyak = roll < rules.leyakChance
+        let rolledFreeze = !rolledLeyak && roll < rules.leyakChance + freezeChance
 
         coinField.clear()
 
-        if rolledFreeze, elapsed >= rules.freezeLockout {
+        if rolledLeyak, elapsed >= rules.leyakLockout {
+            // It falls where the player is standing. A Leyak that spawned at
+            // random would mostly miss on its own, which teaches nothing —
+            // aiming it is what makes the dodge the whole point.
+            let column = input.playerCenter?.x ?? 0.5
+            phase = .leyakDive(column: column, progress: 0)
+            events.append(.leyakCued)
+        } else if rolledFreeze, elapsed >= rules.freezeLockout {
             let side = AgemSide.allCases.randomElement(using: &generator) ?? .kanan
             phase = .freezeGrace(side: side, remaining: rules.freezeGracePeriod)
             events.append(.freezeCued(side))
         } else {
             phase = .squatCue(remaining: rules.squatGracePeriod)
             events.append(.squatCued)
+        }
+    }
+
+    /// The Leyak coming down. Nothing to do but be somewhere else by the time
+    /// it arrives — this is the one move that cannot be ridden out in place.
+    private func advanceLeyakDive(
+        column: CGFloat,
+        progress: Double,
+        delta: Double,
+        input: RunInput,
+        events: inout [RunEvent]
+    ) {
+        let next = progress + delta / rules.leyakDiveSeconds
+
+        // Only lethal once it is actually down among the player, so standing
+        // under it at the moment it appears is a warning rather than a death.
+        if next >= rules.leyakStrikeStart, let player = input.playerCenter,
+           abs(player.x - column) < rules.leyakColumnHalfWidth {
+            events.append(.leyakHit)
+            energy = 0
+            return
+        }
+
+        if next >= 1 {
+            change(energy: rules.leyakDodgedEnergy)
+            score += rules.leyakDodgedScore
+            events.append(.leyakDodged)
+            returnToNgayog()
+        } else {
+            phase = .leyakDive(column: column, progress: next)
         }
     }
 

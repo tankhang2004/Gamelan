@@ -1,8 +1,13 @@
+import AVFoundation
 import SwiftUI
 
 /// Shown right after the curtains open: a video walkthrough explaining where
-/// to put the iPad and where to stand.
+/// to put the iPad and where to stand, over the player's own reflection.
 struct TutorialView: View {
+    /// The live camera, once it has been switched on. Nil until permission is
+    /// granted, and on a device with no camera at all.
+    let session: AVCaptureSession?
+    let onPreviewReady: (AVCaptureVideoPreviewLayer) -> Void
     let onStart: () -> Void
     let onBack: () -> Void
 
@@ -17,10 +22,17 @@ struct TutorialView: View {
 
     var body: some View {
         ZStack {
-            // Stands in for the live camera mirror until the recording
-            // pipeline lands — swap for CameraPreviewView then.
-            Theme.Palette.ink
-                .overlay(Color.black.opacity(0.5))
+            // The player's own reflection, dimmed so the walkthrough stays
+            // readable over it. Seeing themselves here is half the lesson:
+            // it shows immediately whether the iPad is far enough back.
+            Group {
+                if let session {
+                    CameraPreviewView(session: session, onPreviewReady: onPreviewReady)
+                } else {
+                    Theme.Palette.ink
+                }
+            }
+            .overlay(Color.black.opacity(0.5))
 
             VStack(spacing: 18) {
 
@@ -89,6 +101,6 @@ struct TutorialView: View {
 }
 
 #Preview {
-    TutorialView(onStart: {}, onBack: {})
+    TutorialView(session: nil, onPreviewReady: { _ in }, onStart: {}, onBack: {})
         .environment(\.strings, Localizer(language: .indonesian))
 }

@@ -13,6 +13,8 @@ struct TaksuMeterView: View {
 
     /// How faded the meter sits when nothing is happening to it.
     private static let restingOpacity: Double = 0.5
+    /// Fraction of the bar's width the fill is shifted left by.
+    private static let fillNudge: CGFloat = 0.06
     private static let flashSeconds: Double = 0.55
 
     @State private var pulse = false
@@ -27,12 +29,16 @@ struct TaksuMeterView: View {
                 Image("energy-bg")
                     .resizable()
 
+                // The fill artwork is drawn a touch right of centre in its own
+                // canvas, so it needs nudging back to sit inside the painted
+                // channel of the background rather than riding its right edge.
                 Image("energy-fill")
                     .resizable()
                     .frame(height: proxy.size.height)
                     .mask(alignment: .bottom) {
                         Rectangle().frame(height: proxy.size.height * clamped)
                     }
+                    .offset(x: -width * Self.fillNudge)
                     .animation(Theme.Motion.meter, value: fraction)
 
                 VStack {

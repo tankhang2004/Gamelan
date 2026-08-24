@@ -39,6 +39,7 @@ struct Localizer: Equatable, Sendable {
         .cueHold: "TAHAN",
         .cueNgayog: "Ngayog",
         .cueNgeed: "Nge'ed",
+        .cueLeyak: "MINGGIR!",
 
         .flashNice: "MANTAP!",
         .flashMissed: "LEWAT",
@@ -46,6 +47,8 @@ struct Localizer: Equatable, Sendable {
         .flashPerfect: "SEMPURNA!",
         .flashBroke: "GOYAH",
         .flashTooSlow: "KELAMAAN",
+        .flashDodged: "SELAMAT!",
+        .flashCaught: "KENA LEYAK!",
 
         .gameOverTitle: "Selesai",
         .gameOverRetry: "MAIN LAGI",
@@ -147,6 +150,7 @@ struct Localizer: Equatable, Sendable {
         .cueHold: "HOLD",
         .cueNgayog: "Ngayog",
         .cueNgeed: "Nge'ed",
+        .cueLeyak: "MOVE!",
 
         .flashNice: "NICE!",
         .flashMissed: "MISSED",
@@ -154,6 +158,8 @@ struct Localizer: Equatable, Sendable {
         .flashPerfect: "PERFECT!",
         .flashBroke: "WOBBLE",
         .flashTooSlow: "TOO SLOW",
+        .flashDodged: "DODGED!",
+        .flashCaught: "CAUGHT!",
 
         .gameOverTitle: "Game Over",
         .gameOverRetry: "PLAY AGAIN",

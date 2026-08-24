@@ -4,18 +4,20 @@ import SwiftUI
 /// clock in the top right.
 struct PaintSwatchReadout: View {
     let text: String
-    var fill: Color = Theme.Palette.indigo
-    var textColor: Color = Theme.Palette.cream
+    var textColor: Color = .white
     var fontSize: CGFloat = 34
-    var seed: UInt64 = 3
 
     var body: some View {
         Text(text)
             .font(Theme.Fonts.readout(fontSize))
             .foregroundStyle(textColor)
-            .padding(.horizontal, fontSize * 0.9)
-            .padding(.vertical, fontSize * 0.28)
-            .background(BrushSwatchShape(seed: seed).fill(fill))
+            .padding(.horizontal, fontSize * 1.1)
+            .padding(.vertical, fontSize * 0.42)
+            .background(
+                Image("bar-purple")
+                    .resizable()
+                    .scaledToFill()
+            )
             .shadow(color: Theme.Palette.ink.opacity(0.28), radius: 0, x: 2, y: 4)
     }
 }
@@ -53,11 +55,14 @@ struct PoseCueCard: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 24)
+        .padding(.horizontal, 26)
+        .padding(.vertical, 30)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TornEdgeShape(seed: 63, roughness: 0.02).fill(Theme.Palette.paper.opacity(0.92)))
-        .overlay(TornEdgeShape(seed: 63, roughness: 0.02).stroke(Theme.Palette.ink.opacity(0.5), lineWidth: 4))
+        .background(
+            Image("backset-yellow")
+                .resizable()
+                .scaledToFill()
+        )
         .shadow(color: Theme.Palette.ink.opacity(0.3), radius: 12, x: -3, y: 6)
     }
 }
@@ -101,7 +106,7 @@ struct CuePromptView: View {
 #Preview {
     VStack(spacing: 30) {
         PaintSwatchReadout(text: "1342")
-        PaintSwatchReadout(text: "01:45", fill: Theme.Palette.ochre, textColor: Theme.Palette.ink, seed: 8)
+        PaintSwatchReadout(text: "01:45")
         CuePromptView(text: "SQUAT!", progress: 0.4, tint: Theme.Palette.cueOrange)
         PoseCueCard(title: "Agem Kanan", artworkName: nil, symbolName: "figure.stand")
             .frame(width: 220, height: 320)

@@ -13,7 +13,7 @@ struct GameSettings: Codable, Equatable, Sendable {
     var cameraFieldOfView: CameraFieldOfView
 
     static let `default` = GameSettings(
-        musicVolume: 0.7,
+        musicVolume: 0.5,
         sfxVolume: 0.8,
         language: .default,
         cameraFieldOfView: .wide

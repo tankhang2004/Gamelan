@@ -31,6 +31,8 @@ enum SoundEffect: String, Sendable {
     case freezeBroken
     case freezeFailed
     case energyLow
+    /// A Leyak beginning its dive.
+    case leyakCue
     case gameOver
 }
 
@@ -80,7 +82,7 @@ final class NariAudioService: NSObject, AudioServicing {
         .freezeCue: "agem-cue-triggers",
         .freezeLocked: "success-slowed",
         .freezeHeld: "success-tring",
-        .energyLow: "leak-appear",
+        .leyakCue: "leak-appear",
     ]
 
     private var musicVolume: Double = GameSettings.default.musicVolume

@@ -185,6 +185,29 @@ final class GameplayViewModel {
 
     // MARK: - Session control
 
+    /// Switches the camera on while the tutorial is still up.
+    ///
+    /// Two reasons to do it here rather than on READY: the player watches the
+    /// walkthrough against their own reflection, so they can already see how
+    /// much of the room the iPad takes in; and the system's permission prompt
+    /// lands on a screen that explains what the camera is for, instead of
+    /// ambushing them the moment they commit to a run.
+    ///
+    /// Safe to call more than once — the underlying session ignores a second
+    /// start while it is already running.
+    func prepareCamera() async {
+        guard phase == .tutorial else { return }
+
+        do {
+            try await source.start()
+            source.setFieldOfView(settings.settings.cameraFieldOfView)
+        } catch BodyPoseSourceError.permissionDenied {
+            phase = .unavailable(.permissionDenied)
+        } catch {
+            phase = .unavailable(.noCamera)
+        }
+    }
+
     func startSession() async {
         guard phase == .tutorial else { return }
         phase = .preparing
@@ -366,6 +389,9 @@ final class GameplayViewModel {
         case .freezeHeldFully: audio.play(.freezeHeld)
         case .freezeBrokenEarly: audio.play(.freezeBroken)
         case .freezeFailed: audio.play(.freezeFailed)
+        case .leyakCued: audio.play(.leyakCue)
+        case .leyakDodged: audio.play(.squatHeld)
+        case .leyakHit: audio.play(.freezeFailed)
         case .energyLow: audio.play(.energyLow)
         case .gameOver(let score):
             audio.play(.gameOver)

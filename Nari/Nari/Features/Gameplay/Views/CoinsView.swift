@@ -13,7 +13,7 @@ struct CoinsView: View {
     var body: some View {
         ZStack {
             ForEach(placements) { placement in
-                FrangipaniView(value: placement.value, radius: mapper.length(placement.radius))
+                FrangipaniView(radius: mapper.length(placement.radius))
                     .position(mapper.point(placement.center))
                     // Bloom open on arrival, fold away when picked or spent.
                     .transition(.asymmetric(
@@ -27,31 +27,24 @@ struct CoinsView: View {
     }
 }
 
-/// One frangipani with what it is currently worth printed under it.
+/// One frangipani. No number on it: the size already says what it is worth,
+/// and a figure that ticks down beside a shrinking flower is the same fact
+/// twice over the camera the player is trying to move in.
 private struct FrangipaniView: View {
-    let value: Int
     let radius: CGFloat
 
-    /// A slow idle turn, seeded per flower so no two spin in step.
+    /// A slow idle turn, so a flower waiting to be picked still reads as alive.
     @State private var sway = false
 
     var body: some View {
-        VStack(spacing: radius * 0.08) {
-            Image("Frangipani")
-                .resizable()
-                .scaledToFit()
-                .frame(width: radius * 2, height: radius * 2)
-                .rotationEffect(.degrees(sway ? 6 : -6))
-                .shadow(color: Theme.Palette.ink.opacity(0.45), radius: radius * 0.18, y: radius * 0.12)
-
-            Text("\(value)")
-                .font(Theme.Fonts.readout(max(11, radius * 0.5)))
-                .foregroundStyle(.white)
-                .outlined(color: Theme.Palette.ink, width: 1.5)
-                .lineLimit(1)
-        }
-        .onAppear { sway = true }
-        .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true), value: sway)
+        Image("Frangipani")
+            .resizable()
+            .scaledToFit()
+            .frame(width: radius * 2, height: radius * 2)
+            .rotationEffect(.degrees(sway ? 6 : -6))
+            .shadow(color: Theme.Palette.ink.opacity(0.45), radius: radius * 0.18, y: radius * 0.12)
+            .onAppear { sway = true }
+            .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true), value: sway)
     }
 }
 

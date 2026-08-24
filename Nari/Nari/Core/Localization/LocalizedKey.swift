@@ -62,6 +62,7 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case cueHold
     case cueNgayog
     case cueNgeed
+    case cueLeyak
 
     // Event flashes
     case flashNice
@@ -70,6 +71,8 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case flashPerfect
     case flashBroke
     case flashTooSlow
+    case flashDodged
+    case flashCaught
 
     // Game over
     case gameOverTitle
