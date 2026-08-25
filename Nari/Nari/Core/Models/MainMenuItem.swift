@@ -22,7 +22,7 @@ enum MainMenuItem: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .settings: "gearshape"
         case .credits: "info.circle"
-        case .scores: "clock"
+        case .scores: "trophy"
         }
     }
 }

@@ -1,6 +1,10 @@
 import SwiftUI
 
 /// The indigo pill with a heavy ink outline that every primary action uses.
+///
+/// No click sound here on purpose: every current caller wraps this in a
+/// `HandHoverButton`, which already plays one on fire — adding a second here
+/// (on press) would double it up.
 struct PaintedButtonStyle: ButtonStyle {
     var fill: Color = Theme.Palette.indigo
     var textColor: Color = Theme.Palette.cream
@@ -36,8 +40,13 @@ struct PaintedIconButton: View {
     var fill: Color = Theme.Palette.cueOrange
     let action: () -> Void
 
+    @Environment(\.audio) private var audio
+
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            audio.play(.buttonTap)
+            action()
+        }) {
             Image(systemName: symbol)
                 .font(.system(size: diameter * 0.6, weight: .semibold))
                 .foregroundStyle(.white)

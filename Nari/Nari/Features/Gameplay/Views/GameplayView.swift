@@ -8,6 +8,7 @@ struct GameplayView: View {
     let scores: ScoreHistoryStoring
 
     @Environment(\.strings) private var strings
+    @Environment(\.audio) private var audio
     @State private var discSpin: Double = 0
 
     var body: some View {
@@ -15,9 +16,12 @@ struct GameplayView: View {
             switch viewModel.phase {
             case .tutorial:
                 TutorialView(
+                    session: viewModel.captureSession,
+                    onPreviewReady: { viewModel.attachPreview($0) },
                     onStart: { Task { await viewModel.startSession() } },
                     onBack: { viewModel.exit() }
                 )
+                .task { await viewModel.prepareCamera() }
                 .transition(.opacity)
 
             case .unavailable(let problem):
@@ -37,24 +41,18 @@ struct GameplayView: View {
         GeometryReader { proxy in
             ZStack {
                 cameraArea
-
-                // Over the player but under the HUD: the wave is scenery, and the
-                // score and the hold timer have to stay readable through it.
                 squatWave
 
                 if viewModel.phase == .playing {
                     hud
                         .transition(.opacity)
 
-                    // Over the HUD, not under it. Coins are chased now rather than
-                    // reached for, which means they land near the edges where the
-                    // meter and the move card live — and a coin hidden behind the
-                    // furniture is one nobody goes after.
                     coins
                 }
 
                 phaseOverlay
                 eventFlash
+                greatBanner
             }
             .overlay { freezeFrame }
             .background(Theme.Palette.ink)
@@ -103,6 +101,12 @@ struct GameplayView: View {
                     FootSparksView(sparks: viewModel.footSparks, mapper: mapper)
                 }
 
+                // Over the player, because a Leyak the player is standing
+                // behind is not a threat anyone would move away from.
+                if case .leyakDive(let column, let progress) = viewModel.run.phase {
+                    LeyakView(column: column, progress: progress, mapper: mapper)
+                }
+
                 if viewModel.run.phase.cuedSide != nil {
                     PoseMarkersView(markers: viewModel.tracker.markers, mapper: mapper)
                 }
@@ -138,10 +142,7 @@ struct GameplayView: View {
                         Spacer(minLength: 0)
                         PaintSwatchReadout(
                             text: viewModel.clockText,
-                            fill: Theme.Palette.ochre,
-                            textColor: Theme.Palette.ink,
-                            fontSize: proxy.size.height * 0.045,
-                            seed: 8
+                            fontSize: proxy.size.height * 0.045
                         )
                     }
                     Spacer(minLength: 0)
@@ -155,6 +156,7 @@ struct GameplayView: View {
                     cueCard
                         .frame(width: proxy.size.width * 0.19)
                         .padding(.vertical, proxy.size.height * 0.16)
+                        .animation(Theme.Motion.cueDrop, value: cueCardIdentity)
                 }
 
                 VStack {
@@ -196,6 +198,14 @@ struct GameplayView: View {
         }
     }
 
+    /// Which card the slot is showing, so a transition fires whenever it
+    /// changes — including to "nothing", once the intro march card times out.
+    private var cueCardIdentity: String {
+        if let pose = viewModel.cuedPose { return "pose-\(pose.artworkName)" }
+        if viewModel.isSquatCued { return "ngeed" }
+        return viewModel.showsMarchCard ? "march" : "none"
+    }
+
     @ViewBuilder
     private var cueCard: some View {
         if let pose = viewModel.cuedPose {
@@ -212,12 +222,13 @@ struct GameplayView: View {
                 symbolName: "figure.cooldown"
             )
             .transition(.move(edge: .trailing).combined(with: .opacity))
-        } else {
+        } else if viewModel.showsMarchCard {
             PoseCueCard(
                 title: strings[.cueNgayog],
                 artworkName: "PoseNgayog",
                 symbolName: "figure.walk"
             )
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
     }
 
@@ -226,7 +237,7 @@ struct GameplayView: View {
     private var fieldOfViewControl: some View {
         VStack(spacing: 10) {
             Text(strings[.cameraFieldHint])
-                .font(Theme.Fonts.body(17))
+                .font(Theme.Fonts.body(24))
                 .foregroundStyle(Theme.Palette.cream.opacity(0.9))
                 .shadow(color: Theme.Palette.ink, radius: 0, x: 2, y: 2)
 
@@ -240,12 +251,12 @@ struct GameplayView: View {
                     } label: {
                         VStack(spacing: 1) {
                             Text(option.shortLabel)
-                                .font(Theme.Fonts.readout(23))
+                                .font(Theme.Fonts.readout(30))
                             Text(strings[option.labelKey])
-                                .font(Theme.Fonts.body(14))
+                                .font(Theme.Fonts.body(20))
                         }
                         .foregroundStyle(isOn ? Theme.Palette.ink : Theme.Palette.cream)
-                        .frame(width: 104, height: 62)
+                        .frame(width: 130, height: 78)
                         .background(
                             Capsule().fill(isOn ? Theme.Palette.ochre : Color.clear)
                         )
@@ -282,6 +293,8 @@ struct GameplayView: View {
                 CuePromptView(text: strings[.cueFreeze], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink)
             case .freezeHold:
                 CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect)
+            case .leyakDive:
+                CuePromptView(text: strings[.cueLeyak], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink)
             case .gameOver:
                 EmptyView()
             }
@@ -352,8 +365,9 @@ struct GameplayView: View {
 
                 VStack {
                     Text(calibrationMessage)
-                        .font(Theme.Fonts.body(40))
+                        .font(.system(size: 56, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
+                        .outlined(color: Theme.Palette.ink)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 48)
                     Spacer()
@@ -437,10 +451,7 @@ struct GameplayView: View {
         Text(strings[.startingTitle])
             .font(Theme.Fonts.title(56))
             .foregroundStyle(Theme.Palette.indigo)
-            .shadow(color: .white, radius: 0, x: 2, y: 0)
-            .shadow(color: .white, radius: 0, x: -2, y: 0)
-            .shadow(color: .white, radius: 0, x: 0, y: 2)
-            .shadow(color: .white, radius: 0, x: 0, y: -2)
+            .outlined(color: .white)
             .padding(.horizontal, 40)
             .padding(.vertical, 24)
             .background(
@@ -477,6 +488,25 @@ struct GameplayView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
+    /// The painted "GREAT SQUAT" / "GREAT AGEM" stamp, thrown up big in the
+    /// middle when a hold is ridden all the way out. Riding out a whole wave
+    /// or a whole freeze is the hardest thing the game asks for, so it gets
+    /// the loudest thing the game can say back.
+    @ViewBuilder
+    private var greatBanner: some View {
+        if let artwork = greatBannerArtwork {
+            GreatBanner(artworkName: artwork, stamp: viewModel.lastEventAt)
+        }
+    }
+
+    private var greatBannerArtwork: String? {
+        switch viewModel.lastEvent {
+        case .squatHeldFully: "great-squat"
+        case .freezeHeldFully: "great-agem"
+        default: nil
+        }
+    }
+
     /// A short flash naming what just happened, so a hit or a miss is legible
     /// without watching the meter.
     @ViewBuilder
@@ -501,13 +531,17 @@ struct GameplayView: View {
         switch event {
         case .squatHit: (strings[.flashNice], Theme.Palette.poseCorrect)
         case .squatMissed: (strings[.flashMissed], Theme.Palette.poseWrong)
-        case .squatHeldFully: (strings[.flashPerfect], Theme.Palette.ochre)
+        // squatHeldFully and freezeHeldFully get the big painted stamp
+        // instead, so they are deliberately absent here rather than flashing
+        // "PERFECT!" underneath their own banner.
         case .squatBrokenEarly: (strings[.flashBroke], Theme.Palette.cream)
         case .freezeLocked: (strings[.flashLocked], Theme.Palette.poseCorrect)
-        case .freezeHeldFully: (strings[.flashPerfect], Theme.Palette.ochre)
         case .freezeBrokenEarly: (strings[.flashBroke], Theme.Palette.cream)
         case .freezeFailed: (strings[.flashTooSlow], Theme.Palette.poseWrong)
-        case .ngayogCycle, .coinCollected, .squatCued, .freezeCued, .energyLow, .gameOver: nil
+        case .leyakDodged: (strings[.flashDodged], Theme.Palette.poseCorrect)
+        case .leyakHit: (strings[.flashCaught], Theme.Palette.poseWrong)
+        case .ngayogCycle, .coinSpawned, .coinCollected, .squatCued, .freezeCued,
+             .leyakCued, .squatHeldFully, .freezeHeldFully, .energyLow, .gameOver: nil
         }
     }
 
@@ -611,7 +645,10 @@ struct GameplayView: View {
                         .buttonStyle(PopupActionButtonStyle())
                     }
 
-                    Button(strings[.gameplayBack]) { viewModel.exit() }
+                    Button(strings[.gameplayBack]) {
+                        audio.play(.buttonTap)
+                        viewModel.exit()
+                    }
                         .buttonStyle(.plain)
                         .font(Theme.Fonts.label(19))
                         .foregroundStyle(Theme.Palette.ink.opacity(0.75))
@@ -630,6 +667,7 @@ struct GameplayView: View {
             source: SimulatedBodyPoseSource(),
             audio: services.audio,
             scores: services.scores,
+            gameCenter: services.gameCenter,
             settings: services.settings,
             onExit: {}
         ),

@@ -124,3 +124,15 @@ extension Color {
         )
     }
 }
+
+extension View {
+    /// A cheap text stroke: four hard shadows, one per side, since SwiftUI has
+    /// no native outline for `Text`.
+    func outlined(color: Color, width: CGFloat = 2) -> some View {
+        self
+            .shadow(color: color, radius: 0, x: width, y: 0)
+            .shadow(color: color, radius: 0, x: -width, y: 0)
+            .shadow(color: color, radius: 0, x: 0, y: width)
+            .shadow(color: color, radius: 0, x: 0, y: -width)
+    }
+}

@@ -21,7 +21,8 @@ struct RootView: View {
                     ),
                     settings: services.settings,
                     credits: services.credits,
-                    scores: services.scores
+                    scores: services.scores,
+                    gameCenter: services.gameCenter
                 )
                 .transition(.opacity)
 
@@ -31,8 +32,27 @@ struct RootView: View {
             }
         }
         .environment(\.strings, services.settings.localizer)
+        .environment(\.audio, services.audio)
         .animation(Theme.Motion.screenChange, value: router.screen)
         .ignoresSafeArea()
+        .task {
+            await services.gameCenter.authenticate()
+            presentPendingGameCenterSignIn()
+        }
+    }
+
+    /// The auth handler hands back a sign-in sheet rather than presenting it
+    /// itself, so this is the one place in the app with a view controller to
+    /// present it from.
+    private func presentPendingGameCenterSignIn() {
+        guard let viewController = GameCenterPresentation.pendingViewController else { return }
+        GameCenterPresentation.pendingViewController = nil
+
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.windows.first { $0.isKeyWindow }?
+            .rootViewController?
+            .present(viewController, animated: true)
     }
 
     @ViewBuilder
@@ -51,6 +71,7 @@ struct RootView: View {
             source: services.makeBodyPoseSource(),
             audio: services.audio,
             scores: services.scores,
+            gameCenter: services.gameCenter,
             settings: services.settings,
             onExit: {
                 // Dropping the view model stops the camera and clears the session.

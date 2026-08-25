@@ -80,6 +80,7 @@ final class GameplayViewModel {
     @ObservationIgnored private let rules: RunRules = .default
     @ObservationIgnored private let audio: AudioServicing
     @ObservationIgnored private let scores: ScoreHistoryStoring
+    @ObservationIgnored private let gameCenter: LeaderboardProviding
     @ObservationIgnored private let onExit: () -> Void
     @ObservationIgnored private let recorder = SessionRecorder()
     @ObservationIgnored private var consumer: Task<Void, Never>?
@@ -92,6 +93,7 @@ final class GameplayViewModel {
         source: BodyPoseSource,
         audio: AudioServicing,
         scores: ScoreHistoryStoring,
+        gameCenter: LeaderboardProviding,
         settings: SettingsService,
         onExit: @escaping () -> Void
     ) {
@@ -99,6 +101,7 @@ final class GameplayViewModel {
         self.source = source
         self.audio = audio
         self.scores = scores
+        self.gameCenter = gameCenter
         self.settings = settings
         self.onExit = onExit
     }
@@ -133,18 +136,23 @@ final class GameplayViewModel {
         }
     }
 
-    /// Where each coin currently sits on the camera picture.
+    /// True only for the opening seconds of a run.
     ///
-    /// The engine keeps coins in body space so they follow the player around;
-    /// this puts them back into image coordinates for the view, which is the
-    /// same trip a pose marker makes.
+    /// The march is the resting state, so its reference card would otherwise
+    /// sit there unchanged for the whole session, taking up camera the player
+    /// needs to move in. Showing it once teaches the move, then the card slot
+    /// goes back to the interrupts and the prompt text carries the march.
+    var showsMarchCard: Bool { run.elapsed < rules.marchCardSeconds }
+
+    /// Where each frangipani currently sits on the camera picture, at the size
+    /// and value it has wilted to.
     var coinPlacements: [CoinPlacement] {
         run.coinField.coins.map { coin in
             CoinPlacement(
                 id: coin.id,
-                value: coin.value,
+                value: coin.currentValue(rules),
                 center: coin.position,
-                radius: coin.radius,
+                radius: coin.currentRadius(rules),
                 remainingFraction: coin.remainingFraction
             )
         }
@@ -177,6 +185,29 @@ final class GameplayViewModel {
 
     // MARK: - Session control
 
+    /// Switches the camera on while the tutorial is still up.
+    ///
+    /// Two reasons to do it here rather than on READY: the player watches the
+    /// walkthrough against their own reflection, so they can already see how
+    /// much of the room the iPad takes in; and the system's permission prompt
+    /// lands on a screen that explains what the camera is for, instead of
+    /// ambushing them the moment they commit to a run.
+    ///
+    /// Safe to call more than once — the underlying session ignores a second
+    /// start while it is already running.
+    func prepareCamera() async {
+        guard phase == .tutorial else { return }
+
+        do {
+            try await source.start()
+            source.setFieldOfView(settings.settings.cameraFieldOfView)
+        } catch BodyPoseSourceError.permissionDenied {
+            phase = .unavailable(.permissionDenied)
+        } catch {
+            phase = .unavailable(.noCamera)
+        }
+    }
+
     func startSession() async {
         guard phase == .tutorial else { return }
         phase = .preparing
@@ -198,20 +229,17 @@ final class GameplayViewModel {
 
     func pause() {
         guard phase == .playing else { return }
-        audio.play(.buttonTap)
         phase = .paused
     }
 
     func resume() {
         guard phase == .paused else { return }
-        audio.play(.buttonTap)
         // Come back through calibration so the player has time to get set again.
         beginCalibration()
     }
 
     /// Starts a whole new run from the game over screen.
     func retry() {
-        audio.play(.buttonTap)
         recorder.cancel()
         run = RunEngine()
         tracker.reset()
@@ -290,6 +318,7 @@ final class GameplayViewModel {
 
         guard calibrationProgress >= 1 else { return }
         audio.play(.calibrationComplete)
+        audio.startBackgroundMusic(.gameplay)
         phase = .starting(remaining: Self.countdownSeconds)
     }
 
@@ -348,6 +377,7 @@ final class GameplayViewModel {
     private func react(to event: RunEvent) {
         switch event {
         case .ngayogCycle: audio.play(.ngayogCycle)
+        case .coinSpawned: audio.play(.coinSpawned)
         case .coinCollected: audio.play(.coinCollected)
         case .squatCued: audio.play(.squatCue)
         case .squatHit: audio.play(.squatHit)
@@ -359,10 +389,14 @@ final class GameplayViewModel {
         case .freezeHeldFully: audio.play(.freezeHeld)
         case .freezeBrokenEarly: audio.play(.freezeBroken)
         case .freezeFailed: audio.play(.freezeFailed)
+        case .leyakCued: audio.play(.leyakCue)
+        case .leyakDodged: audio.play(.squatHeld)
+        case .leyakHit: audio.play(.freezeFailed)
         case .energyLow: audio.play(.energyLow)
         case .gameOver(let score):
             audio.play(.gameOver)
             scores.record(ScoreRecord(score: score, survivedSeconds: run.elapsed))
+            Task { await gameCenter.submit(score: score) }
             phase = .gameOver
             isRecordingAvailable = recorder.isAvailable
             isPreparingRecording = isRecordingAvailable
@@ -378,7 +412,7 @@ final class GameplayViewModel {
         // everything else on screen, so they are heard but never flashed. The
         // coin has its own feedback where it was picked up.
         switch event {
-        case .ngayogCycle, .coinCollected: return
+        case .ngayogCycle, .coinSpawned, .coinCollected: return
         default: break
         }
         lastEvent = event

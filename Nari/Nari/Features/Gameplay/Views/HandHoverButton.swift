@@ -32,6 +32,7 @@ struct HandHoverButton<Label: View>: View {
     @ViewBuilder var label: () -> Label
 
     @Environment(\.handScreenPositions) private var handScreenPositions
+    @Environment(\.audio) private var audio
     @State private var hoverProgress: Double = 0
     @State private var hasFired = false
     @State private var lastTick: Date?
@@ -70,6 +71,7 @@ struct HandHoverButton<Label: View>: View {
     private func fire() {
         hoverProgress = 0
         hasFired = false
+        audio.play(.buttonTap)
         action()
     }
 
@@ -88,6 +90,7 @@ struct HandHoverButton<Label: View>: View {
             hoverProgress = min(1, hoverProgress + delta / holdSeconds)
             if hoverProgress >= 1, !hasFired {
                 hasFired = true
+                audio.play(.buttonTap)
                 action()
             }
         } else {

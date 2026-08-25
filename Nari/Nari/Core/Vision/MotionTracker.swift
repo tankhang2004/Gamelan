@@ -32,25 +32,26 @@ struct MotionTracker {
     ) -> RunInput {
         var input = RunInput()
 
-        input.completedNgayogCycle = ngayog.update(snapshot)
-
         squat.update(snapshot, delta: delta)
         input.isSquatting = squat.isSquatting
 
         let frame = BodyFrame(snapshot: snapshot)
         bodyFrame = frame
 
-        // Hands and hips go to the loop in image space, because that is where
-        // the coins are: pinned to the room rather than to the player.
-        input.handPositions = [BodyJoint.leftWrist, .rightWrist].compactMap {
-            snapshot.position(of: $0)
-        }
+        // Hands, feet and hips go to the loop in image space, because that is
+        // where the flowers are: pinned to the room rather than to the player.
+        input.catchPositions = [BodyJoint.leftWrist, .rightWrist, .leftAnkle, .rightAnkle]
+            .compactMap { snapshot.position(of: $0) }
         input.playerCenter = frame?.hipCenter
         if snapshot.imageSize.width > 0 {
             input.frameAspect = snapshot.imageSize.height / snapshot.imageSize.width
         }
 
+        // The march is the walk now, so a footfall — not a head tilt — is
+        // what pays out. `ngayog` still runs because the HUD reads its tilt.
         lastSteps = steps.update(snapshot, delta: delta, rules: rules)
+        _ = ngayog.update(snapshot)
+        input.completedNgayogCycle = !lastSteps.isEmpty
 
         guard let cuedPose else {
             markers = []

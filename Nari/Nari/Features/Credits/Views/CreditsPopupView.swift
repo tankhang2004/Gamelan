@@ -43,12 +43,7 @@ struct CreditsPopupView: View {
                 .foregroundStyle(Theme.Palette.indigoDeep)
 
             ForEach(Array(section.lines.enumerated()), id: \.offset) { _, line in
-                Text(.init(line))
-                    .font(Theme.Fonts.body(24))
-                    .foregroundStyle(Theme.Palette.ink.opacity(0.9))
-                    .tint(Theme.Palette.indigo)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                lineView(line)
             }
 
             Rectangle()
@@ -56,6 +51,40 @@ struct CreditsPopupView: View {
                 .frame(height: 1)
                 .padding(.top, 6)
         }
+    }
+
+    /// Lines starting with a "1. " style numeral get a hanging indent so a
+    /// wrapped second line lines up under the text, not under the number.
+    @ViewBuilder
+    private func lineView(_ line: String) -> some View {
+        if let (number, rest) = numberedListPrefix(of: line) {
+            HStack(alignment: .top, spacing: 10) {
+                Text(number)
+                    .font(Theme.Fonts.body(24))
+                    .foregroundStyle(Theme.Palette.ink.opacity(0.9))
+                    .frame(width: 28, alignment: .trailing)
+
+                Text(.init(rest))
+                    .font(Theme.Fonts.body(24))
+                    .foregroundStyle(Theme.Palette.ink.opacity(0.9))
+                    .tint(Theme.Palette.indigo)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            Text(.init(line))
+                .font(Theme.Fonts.body(24))
+                .foregroundStyle(Theme.Palette.ink.opacity(0.9))
+                .tint(Theme.Palette.indigo)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func numberedListPrefix(of line: String) -> (number: String, rest: String)? {
+        guard let range = line.range(of: #"^\d+\."#, options: .regularExpression) else { return nil }
+        let rest = line[range.upperBound...].trimmingCharacters(in: .whitespaces)
+        return (String(line[..<range.upperBound]), rest)
     }
 }
 

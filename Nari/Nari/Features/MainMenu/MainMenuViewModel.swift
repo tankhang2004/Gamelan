@@ -38,7 +38,7 @@ final class MainMenuViewModel {
     func onAppear() {
         guard !hasPlayedEntrance else { return }
         hasPlayedEntrance = true
-        audio.startBackgroundMusic()
+        audio.startBackgroundMusic(.menu)
 
         choreography = Task { [weak self] in
             try? await Task.sleep(for: .seconds(0.15))
@@ -84,7 +84,6 @@ final class MainMenuViewModel {
 
     func select(_ item: MainMenuItem) {
         guard !isTransitioning else { return }
-        audio.play(.buttonTap)
 
         switch item {
         case .settings: present(.settings)

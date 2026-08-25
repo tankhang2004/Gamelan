@@ -37,20 +37,15 @@ struct GameOverView: View {
             Theme.Palette.ink.opacity(0.55)
                 .ignoresSafeArea()
 
-            VStack {
-                HStack {
-                    Spacer()
-                    closeButton
-                }
-
-                Spacer()
-
+            // The summary sits as one vertically centred block, so the gap
+            // above it always matches the gap below however tall the video
+            // turns out to be. The close button is deliberately outside it —
+            // it belongs to the corner of the screen, not to the group.
+            VStack(spacing: 44) {
                 HStack(alignment: .center, spacing: 48) {
                     scoreCard
                     videoPlayback
                 }
-
-                Spacer()
 
                 VStack(spacing: 10) {
                     actionRow
@@ -60,14 +55,20 @@ struct GameOverView: View {
                             .foregroundStyle(.white.opacity(0.8))
                     }
                 }
-                // Nudged up off the bottom edge, so a hand reaching toward
-                // the buttons from a few metres back doesn't foreshorten
-                // into the very edge of frame.
-                .padding(.bottom, 28)
             }
             .padding(32)
             .opacity(landed ? 1 : 0)
             .scaleEffect(landed ? 1 : 0.9)
+
+            VStack {
+                HStack {
+                    Spacer()
+                    closeButton
+                }
+                Spacer()
+            }
+            .padding(32)
+            .opacity(landed ? 1 : 0)
         }
         .onAppear {
             withAnimation(Theme.Motion.cueDrop) { landed = true }
@@ -100,34 +101,34 @@ struct GameOverView: View {
 
     // MARK: - Score
 
+    /// Laid out as a stack rather than with hand-placed offsets, so the badge
+    /// stays centred under the score whatever it ends up saying — "New High
+    /// Score!" and "Best score: 18420" are very different widths.
     private var scoreCard: some View {
-        ZStack(alignment: .topLeading) {
-            Image("bg-white")
-                .resizable()
-                .frame(width: 340, height: 150)
-                .overlay(
-                    Text(score.formatted())
-                        .font(.system(size: 56, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Theme.Palette.ink)
-                )
+        VStack(spacing: 6) {
+            ZStack(alignment: .topLeading) {
+                Image("bg-white")
+                    .resizable()
+                    .frame(width: 340, height: 150)
+                    .overlay(
+                        Text(score.formatted())
+                            .font(.system(size: 56, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Theme.Palette.ink)
+                    )
 
-            outlinedTitle
-                .offset(x: 6, y: -28)
+                outlinedTitle
+                    .offset(x: 6, y: -28)
+            }
 
             scoreBadge
-                .offset(x: 22, y: 148)
         }
-        .padding(.bottom, 30)
     }
 
     private var outlinedTitle: some View {
         Text(strings[.gameOverYourScore])
             .font(Theme.Fonts.title(42))
             .foregroundStyle(Theme.Palette.indigo)
-            .shadow(color: .white, radius: 0, x: 2, y: 0)
-            .shadow(color: .white, radius: 0, x: -2, y: 0)
-            .shadow(color: .white, radius: 0, x: 0, y: 2)
-            .shadow(color: .white, radius: 0, x: 0, y: -2)
+            .outlined(color: .white)
     }
  
     private var scoreBadge: some View {

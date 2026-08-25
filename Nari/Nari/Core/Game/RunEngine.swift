@@ -6,15 +6,16 @@ import Observation
 /// the loop actually asks. Keeping the engine behind this struct is what lets
 /// the whole game be driven by fake input in a preview or a test.
 struct RunInput: Sendable {
-    /// A full left-right head tilt finished on this frame.
+    /// A foot landed on this frame — one beat of the march.
     var completedNgayogCycle = false
     /// The player is currently below the squat threshold.
     var isSquatting = false
     /// All nine tracked points are inside the cued pose right now.
     var matchesCuedPose = false
-    /// Both wrists in normalized image space, for sweeping up coins. Empty when
-    /// the body cannot be read this frame.
-    var handPositions: [CGPoint] = []
+    /// Wrists and ankles in normalized image space — a flower is caught with
+    /// whichever reaches it first. Empty when the body cannot be read this
+    /// frame.
+    var catchPositions: [CGPoint] = []
     /// The hip centre in the same space, so a coin can be placed a walk away
     /// from wherever the player is standing. Nil when the body is not readable.
     var playerCenter: CGPoint?
@@ -51,6 +52,7 @@ final class RunEngine {
         case .squatHold(let held): holdTotal > 0 ? held / holdTotal : 0
         case .freezeGrace(_, let remaining): 1 - remaining / rules.freezeGracePeriod
         case .freezeHold(_, let held): holdTotal > 0 ? held / holdTotal : 0
+        case .leyakDive(_, let progress): progress
         case .ngayog, .gameOver: 0
         }
     }
@@ -70,7 +72,6 @@ final class RunEngine {
     @ObservationIgnored private var rampsApplied = 0
     /// The score drip during a hold is fractional; whole points are banked from
     /// here so a 7-second hold does not lose a point per second to rounding.
-    @ObservationIgnored private var scoreFraction: Double = 0
     @ObservationIgnored private var hasWarnedLowEnergy = false
     /// How long the hold in progress runs for. Drawn fresh at every cue, so a
     /// player cannot learn one rhythm and stop watching.
@@ -109,6 +110,8 @@ final class RunEngine {
             advanceFreezeGrace(side: side, remaining: remaining, delta: delta, input: input, events: &events)
         case .freezeHold(let side, let held):
             advanceFreezeHold(side: side, held: held, delta: delta, input: input, events: &events)
+        case .leyakDive(let column, let progress):
+            advanceLeyakDive(column: column, progress: progress, delta: delta, input: input, events: &events)
         case .gameOver:
             break
         }
@@ -127,14 +130,16 @@ final class RunEngine {
             events.append(.ngayogCycle)
         }
 
-        for value in coinField.advance(
+        let tick = coinField.advance(
             delta: delta,
-            hands: input.handPositions,
+            catchers: input.catchPositions,
             player: input.playerCenter,
             frameAspect: input.frameAspect,
             rules: rules,
             generator: &generator
-        ) {
+        )
+        if tick.didSpawn { events.append(.coinSpawned) }
+        for value in tick.collected {
             score += value
             events.append(.coinCollected(value: value))
         }
@@ -142,19 +147,59 @@ final class RunEngine {
         timeToNextInterrupt -= delta
         guard timeToNextInterrupt <= 0 else { return }
 
-        // Rolled before the lockout is checked, so an early Freeze is suppressed
-        // rather than re-rolled into a squat that was never drawn.
-        let rolledFreeze = Double.random(in: 0..<1, using: &generator) < freezeChance
+        // Rolled before the lockouts are checked, so an early Freeze or Leyak
+        // is suppressed rather than re-rolled into a squat that was never
+        // drawn.
+        let roll = Double.random(in: 0..<1, using: &generator)
+        let rolledLeyak = roll < rules.leyakChance
+        let rolledFreeze = !rolledLeyak && roll < rules.leyakChance + freezeChance
 
         coinField.clear()
 
-        if rolledFreeze, elapsed >= rules.freezeLockout {
+        if rolledLeyak, elapsed >= rules.leyakLockout {
+            // It falls where the player is standing. A Leyak that spawned at
+            // random would mostly miss on its own, which teaches nothing —
+            // aiming it is what makes the dodge the whole point.
+            let column = input.playerCenter?.x ?? 0.5
+            phase = .leyakDive(column: column, progress: 0)
+            events.append(.leyakCued)
+        } else if rolledFreeze, elapsed >= rules.freezeLockout {
             let side = AgemSide.allCases.randomElement(using: &generator) ?? .kanan
             phase = .freezeGrace(side: side, remaining: rules.freezeGracePeriod)
             events.append(.freezeCued(side))
         } else {
             phase = .squatCue(remaining: rules.squatGracePeriod)
             events.append(.squatCued)
+        }
+    }
+
+    /// The Leyak coming down. Nothing to do but be somewhere else by the time
+    /// it arrives — this is the one move that cannot be ridden out in place.
+    private func advanceLeyakDive(
+        column: CGFloat,
+        progress: Double,
+        delta: Double,
+        input: RunInput,
+        events: inout [RunEvent]
+    ) {
+        let next = progress + delta / rules.leyakDiveSeconds
+
+        // Only lethal once it is actually down among the player, so standing
+        // under it at the moment it appears is a warning rather than a death.
+        if next >= rules.leyakStrikeStart, let player = input.playerCenter,
+           abs(player.x - column) < rules.leyakColumnHalfWidth {
+            events.append(.leyakHit)
+            energy = 0
+            return
+        }
+
+        if next >= 1 {
+            change(energy: rules.leyakDodgedEnergy)
+            score += rules.leyakDodgedScore
+            events.append(.leyakDodged)
+            returnToNgayog()
+        } else {
+            phase = .leyakDive(column: column, progress: next)
         }
     }
 
@@ -200,6 +245,7 @@ final class RunEngine {
 
         let total = held + delta
         if total >= holdTotal {
+            change(energy: rules.squatHoldEnergy)
             score += rules.squatHoldScore
             events.append(.squatHeldFully)
             returnToNgayog()
@@ -218,7 +264,6 @@ final class RunEngine {
         if input.matchesCuedPose {
             holdTotal = Double.random(in: rules.freezeHoldDuration, using: &generator)
             phase = .freezeHold(side: side, elapsed: 0)
-            scoreFraction = 0
             events.append(.freezeLocked)
             return
         }
@@ -244,23 +289,18 @@ final class RunEngine {
         events: inout [RunEvent]
     ) {
         guard input.matchesCuedPose else {
-            // Breaking early is not punished — the drip simply stops, and
-            // everything banked so far is kept.
+            // Breaking early is not punished, but it pays nothing either: the
+            // agem is banked on completion now, not dripped, so that the
+            // "GREAT AGEM" banner can state one honest number.
             events.append(.freezeBrokenEarly)
             returnToNgayog()
             return
         }
 
-        change(energy: rules.freezeHoldEnergyPerSecond * delta)
-        // A fuller meter pays more per second, so holding Taksu high is worth
-        // something beyond survival.
-        scoreFraction += rules.freezeHoldScorePerSecond * energyFraction * delta
-        let whole = scoreFraction.rounded(.down)
-        score += Int(whole)
-        scoreFraction -= whole
-
         let total = held + delta
         if total >= holdTotal {
+            change(energy: rules.freezeHoldEnergy)
+            score += rules.freezeHoldScore
             events.append(.freezeHeldFully)
             returnToNgayog()
         } else {
@@ -270,7 +310,6 @@ final class RunEngine {
 
     private func returnToNgayog() {
         phase = .ngayog
-        scoreFraction = 0
         holdTotal = 0
         coinField.clear()
         scheduleNextInterrupt()

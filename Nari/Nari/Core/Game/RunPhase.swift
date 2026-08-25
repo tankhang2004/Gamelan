@@ -26,12 +26,16 @@ enum RunPhase: Equatable, Sendable {
     case freezeGrace(side: AgemSide, remaining: Double)
     /// The pose locked in and is being held.
     case freezeHold(side: AgemSide, elapsed: Double)
+    /// A Leyak is diving down the room and has to be side-stepped. `column` is
+    /// where it will fall, in normalized image x; `progress` runs 0 to 1 as it
+    /// comes down.
+    case leyakDive(column: CGFloat, progress: Double)
     case gameOver
 
     var isInterrupt: Bool {
         switch self {
         case .ngayog, .gameOver: false
-        case .squatCue, .squatHold, .freezeGrace, .freezeHold: true
+        case .squatCue, .squatHold, .freezeGrace, .freezeHold, .leyakDive: true
         }
     }
 
@@ -39,7 +43,7 @@ enum RunPhase: Equatable, Sendable {
     var cuedSide: AgemSide? {
         switch self {
         case .freezeGrace(let side, _), .freezeHold(let side, _): side
-        case .ngayog, .squatCue, .squatHold, .gameOver: nil
+        case .ngayog, .squatCue, .squatHold, .leyakDive, .gameOver: nil
         }
     }
 }
@@ -48,7 +52,16 @@ enum RunPhase: Equatable, Sendable {
 /// layer can play the right cue. Purely a report — no state lives here.
 enum RunEvent: Equatable, Sendable {
     case ngayogCycle
-    /// A coin was swept up during the walk, worth this many points.
+    /// A Leyak started its dive.
+    case leyakCued
+    /// It went past without touching the player.
+    case leyakDodged
+    /// It landed on them. There is no recovering from this one.
+    case leyakHit
+    /// A frangipani opened somewhere in the room.
+    case coinSpawned
+    /// A frangipani was picked, worth this many points at the size it was
+    /// caught — the longer it had been wilting, the less this is.
     case coinCollected(value: Int)
     case squatCued
     case squatHit

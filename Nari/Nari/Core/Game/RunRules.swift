@@ -12,11 +12,26 @@ struct RunRules: Sendable {
     var startingEnergy: Double = 50
     var maximumEnergy: Double = 100
 
-    // MARK: - Ngayog (the default walk)
+    // MARK: - Ngayog (marching in place, the default move)
 
-    /// One full left-right head tilt.
-    var ngayogCycleEnergy: Double = 2
-    var ngayogCycleScore: Int = 5
+    /// Paid per footfall while marching.
+    ///
+    /// Marching is optional: it scores nothing on its own, so a player can
+    /// stand still and still pick flowers. What it buys is Taksu — the meter
+    /// that keeps the run alive — which makes it worth doing without making
+    /// it the thing being scored.
+    ///
+    /// Halved from the old head-tilt reward because a march lands roughly
+    /// twice as often as a full left-right tilt did, so the energy per second
+    /// stays where it was.
+    var ngayogCycleEnergy: Double = 1
+    var ngayogCycleScore: Int = 0
+
+    /// How long the march reference card stays on screen at the start of a
+    /// run. After this the card slot belongs to the interrupts alone, and the
+    /// march is carried by the prompt text — it is the resting state, so a
+    /// card that never changes is just something in front of the camera.
+    var marchCardSeconds: Double = 8
 
     // MARK: - Nge'ed (squat interrupt)
 
@@ -33,8 +48,11 @@ struct RunRules: Sendable {
     /// both ends sit at the design's starting value, so widening it is a
     /// one-line change here.
     var squatHoldDuration: ClosedRange<Double> = 5...5
-    /// Paid once for riding out the whole wave.
-    var squatHoldScore: Int = 15
+    /// Paid once for riding out the whole wave. Matches what the
+    /// "GREAT SQUAT" banner promises — the banner is the receipt, so the
+    /// two have to agree.
+    var squatHoldScore: Int = 5
+    var squatHoldEnergy: Double = 5
     /// Standing up into the wave. Costs the same as never squatting at all.
     var squatBreakEnergy: Double = -8
 
@@ -56,12 +74,45 @@ struct RunRules: Sendable {
     /// the instant end makes the penalty mean something and puts the run back
     /// on the meter.
     var freezeFailEnergy: Double = -20
-    var freezeHoldEnergyPerSecond: Double = 3
-    /// Points per second while holding, before the energy multiplier. A full
-    /// Taksu meter pays the whole 20; a meter at 40% pays 8.
-    var freezeHoldScorePerSecond: Double = 20
+    /// Paid once for holding the whole agem, matching the "GREAT AGEM"
+    /// banner. Flat rather than dripped per second because the banner
+    /// states one number, and a payout that varied with the meter would
+    /// make that number a lie most of the time.
+    var freezeHoldEnergy: Double = 15
+    var freezeHoldScore: Int = 100
 
-    // MARK: - Coins (gathered during the walk)
+    // MARK: - Leyak (the dodge)
+
+    /// How long the Leyak takes to come down the room.
+    ///
+    /// Long enough to see it, read where it is falling, and walk out of the
+    /// way — this is the one move in the game that cannot be survived by
+    /// standing still, so the window has to be generous.
+    var leyakDiveSeconds: Double = 3.4
+    /// Half the width of the killing column, in frame widths. Narrower than
+    /// the artwork, which is mostly hair: only the face actually strikes.
+    var leyakColumnHalfWidth: CGFloat = 0.085
+    /// The fraction of the dive after which contact is lethal, so a player
+    /// standing under it at the moment it appears still has time to move.
+    var leyakStrikeStart: Double = 0.42
+    /// Paid for getting out of the way.
+    var leyakDodgedScore: Int = 40
+    var leyakDodgedEnergy: Double = 5
+    /// Chance the shared interrupt timer picks the Leyak.
+    var leyakChance: Double = 0.20
+    /// No Leyak this early into a run — same reasoning as `freezeLockout`.
+    var leyakLockout: Double = 20
+
+    // MARK: - Frangipanis (gathered during the march)
+
+    /// How a flower wilts across its lifetime, from just-spawned to gone.
+    ///
+    /// Picked immediately it is full size and pays full value; left to the
+    /// last moment it is a third of the size and pays a third. This is the
+    /// "grab it fast" pressure — nothing else in the loop rewards urgency.
+    var coinWiltScale: ClosedRange<CGFloat> = 0.34...1.0
+    var coinWiltValue: ClosedRange<CGFloat> = 0.30...1.0
+
 
     /// How many sizes of coin there are. Tier 1 is the smallest and sits
     /// closest in; tier 10 is the biggest, sits furthest out, and pays most.
@@ -101,9 +152,9 @@ struct RunRules: Sendable {
     /// at the top rather than a value tuned to one iPad.
     var coinPlayArea = CGRect(x: 0.12, y: 0.22, width: 0.68, height: 0.70)
     /// Drawn radius of the smallest and largest coin, in frame widths.
-    var coinRadiusRange: ClosedRange<CGFloat> = 0.030...0.070
+    var coinRadiusRange: ClosedRange<CGFloat> = 0.055...0.115
     /// Clear space kept between two coins, so they never overlap on screen.
-    var coinMinimumSeparation: CGFloat = 0.04
+    var coinMinimumSeparation: CGFloat = 0.05
 
     // MARK: - Footwork
 
