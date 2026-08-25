@@ -1,6 +1,16 @@
 import SwiftUI
 
-/// Wherever each tracked hand currently sits on screen, already run through
+/// The gameplay stage's own coordinate space.
+///
+/// Named rather than global, because the stage turns to face gravity while
+/// the window it sits in may not — see `UprightStage`. Hand positions and
+/// button frames are both measured here, so the two keep agreeing whichever
+/// way up the phone is being held.
+enum GameplayStage {
+    static let space = "gameplay-stage"
+}
+
+/// Wherever each tracked hand currently sits on the stage, already run through
 /// the camera-to-preview mapping so it lines up with SwiftUI's own layout.
 /// Set once at the top of the gameplay stage and read by every
 /// `HandHoverButton` beneath it; empty off the gameplay stage.
@@ -77,7 +87,7 @@ struct HandHoverButton<Label: View>: View {
 
     private func isHovered(_ points: [CGPoint], in proxy: GeometryProxy) -> Bool {
         guard !points.isEmpty else { return false }
-        let frame = proxy.frame(in: .global).insetBy(dx: -touchMargin, dy: -touchMargin)
+        let frame = proxy.frame(in: .named(GameplayStage.space)).insetBy(dx: -touchMargin, dy: -touchMargin)
         return points.contains { frame.contains($0) }
     }
 

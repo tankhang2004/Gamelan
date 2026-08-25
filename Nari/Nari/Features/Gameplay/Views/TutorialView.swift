@@ -38,6 +38,33 @@ struct TutorialView: View {
             }
             .overlay(Color.black.opacity(0.5))
 
+            // Turned to stand up against gravity, the same as the play
+            // stage — the reflection behind it already follows the phone
+            // whether or not the window is allowed to, and a walkthrough
+            // lying on its side over an upright reflection is a worse first
+            // impression than either problem on its own.
+            UprightStage {
+                tutorialChrome
+            }
+        }
+        .ignoresSafeArea()
+        .onReceive(timer) { _ in
+            withAnimation(.easeInOut(duration: 0.45)) {
+                stepIndex = (stepIndex + 1) % steps.count
+            }
+        }
+        .task {
+            #if DEBUG
+            guard DebugLaunchOptions.autoStartsSession else { return }
+            try? await Task.sleep(for: .seconds(1.5))
+            onStart()
+            #endif
+        }
+    }
+
+    /// The walkthrough itself: video, caption, start button, and the way out.
+    private var tutorialChrome: some View {
+        ZStack {
             // Everything below is sized against the stage rather than fixed,
             // because this screen has to survive an iPhone on its side: about
             // four hundred points of height for a 16:9 video, a caption, a
@@ -92,19 +119,6 @@ struct TutorialView: View {
                 Spacer()
             }
             .padding(28)
-        }
-        .ignoresSafeArea()
-        .onReceive(timer) { _ in
-            withAnimation(.easeInOut(duration: 0.45)) {
-                stepIndex = (stepIndex + 1) % steps.count
-            }
-        }
-        .task {
-            #if DEBUG
-            guard DebugLaunchOptions.autoStartsSession else { return }
-            try? await Task.sleep(for: .seconds(1.5))
-            onStart()
-            #endif
         }
     }
 

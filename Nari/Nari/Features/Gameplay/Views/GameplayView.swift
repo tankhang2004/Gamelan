@@ -42,59 +42,89 @@ struct GameplayView: View {
 
     // MARK: - Stage
 
+    /// The live picture, and over it a stage that stands up to gravity.
+    ///
+    /// The two are deliberately separate layers. Everything drawn over the
+    /// picture goes inside `UprightStage` and turns with the phone — the HUD
+    /// and the overlays pinned to the picture alike, because a stage turned
+    /// to face gravity is measured in the very frame the levelled picture is
+    /// drawn in, and the two only keep agreeing if they turn together.
     private var stage: some View {
-        GeometryReader { proxy in
-            ZStack {
-                cameraArea
-                squatWave
+        ZStack {
+            Theme.Palette.ink
+            cameraPicture
 
-                if viewModel.phase == .playing {
-                    hud
-                        .transition(.opacity)
+            UprightStage {
+                GeometryReader { proxy in
+                    ZStack {
+                        // Turned with the rest of the stage rather than left
+                        // with the picture: it stands in for a camera, but
+                        // it is the only thing on this screen with words on
+                        // it, and words want to be the right way up.
+                        if viewModel.captureSession == nil {
+                            simulatorStandIn
+                        }
 
-                    coins
+                        cameraOverlays
+                        squatWave
+
+                        if viewModel.phase == .playing {
+                            hud
+                                .transition(.opacity)
+
+                            coins
+                        }
+
+                        phaseOverlay
+                        eventFlash
+                        greatBanner
+                    }
+                    .overlay { freezeFrame }
+                    .environment(\.handScreenPositions, handScreenPositions(in: proxy))
                 }
-
-                phaseOverlay
-                eventFlash
-                greatBanner
+                .coordinateSpace(.named(GameplayStage.space))
             }
-            .overlay { freezeFrame }
-            .background(Theme.Palette.ink)
-            .environment(\.handScreenPositions, handScreenPositions(in: proxy))
+        }
+    }
+
+    /// The only layer left square to the window. `AVCaptureVideoPreviewLayer`
+    /// levels its own content against gravity and crops it to its own bounds
+    /// to do so, so turning the view it sits in would only turn the picture
+    /// twice.
+    @ViewBuilder
+    private var cameraPicture: some View {
+        if let session = viewModel.captureSession {
+            CameraPreviewView(session: session) { layer in
+                viewModel.attachPreview(layer)
+            }
         }
     }
 
     /// The player's wrists, mapped from normalized image space onto this
-    /// stage's own screen coordinates — the same trip a pose marker or a coin
+    /// stage's own coordinates — the same trip a pose marker or a coin
     /// makes — so a `HandHoverButton` anywhere in the stage can compare its
     /// own frame against them directly.
+    ///
+    /// Counted from the stage's corner rather than the window's, because the
+    /// stage is turned to face gravity and the window is not: a wrist and the
+    /// button it is reaching for only agree while both are measured in the
+    /// same frame.
     private func handScreenPositions(in proxy: GeometryProxy) -> [CGPoint] {
-        let origin = proxy.frame(in: .global).origin
         let mapper = CameraFrameMapper(
             imageSize: viewModel.imageSize,
             viewSize: proxy.size,
             isMirrored: viewModel.isPreviewMirrored
         )
-        return viewModel.handNormalizedPositions.map { normalized in
-            let local = mapper.point(normalized)
-            return CGPoint(x: origin.x + local.x, y: origin.y + local.y)
-        }
+        return viewModel.handNormalizedPositions.map(mapper.point)
     }
 
-    private var cameraArea: some View {
+    /// Everything pinned to the picture rather than to the screen. It lives
+    /// on the upright stage with the HUD: the picture is levelled against
+    /// gravity, so image space is a gravity-levelled space too, and a marker
+    /// only lands on the body while the two are read the same way up.
+    private var cameraOverlays: some View {
         GeometryReader { proxy in
             ZStack {
-                Theme.Palette.ink
-
-                if let session = viewModel.captureSession {
-                    CameraPreviewView(session: session) { layer in
-                        viewModel.attachPreview(layer)
-                    }
-                } else {
-                    simulatorStandIn
-                }
-
                 let mapper = CameraFrameMapper(
                     imageSize: viewModel.imageSize,
                     viewSize: proxy.size,
@@ -649,43 +679,48 @@ struct GameplayView: View {
     private func unavailable(_ problem: GameplayViewModel.Phase.Problem) -> some View {
         let isPermission = problem == .permissionDenied
 
-        return ZStack {
-            PaintTexture()
+        // Upright like the rest of the session. This is the one screen with
+        // nothing but words on it, and words are the thing a sideways screen
+        // costs the most.
+        return UprightStage {
+            ZStack {
+                PaintTexture()
 
-            VStack(spacing: 16) {
-                Image(systemName: isPermission ? "lock.slash" : "video.slash")
-                    .font(.system(size: 46))
-                    .foregroundStyle(Theme.Palette.indigo)
+                VStack(spacing: 16) {
+                    Image(systemName: isPermission ? "lock.slash" : "video.slash")
+                        .font(.system(size: 46))
+                        .foregroundStyle(Theme.Palette.indigo)
 
-                Text(strings[isPermission ? .cameraDeniedTitle : .cameraMissingTitle])
-                    .font(Theme.Fonts.title(34))
-                    .foregroundStyle(Theme.Palette.ink)
+                    Text(strings[isPermission ? .cameraDeniedTitle : .cameraMissingTitle])
+                        .font(Theme.Fonts.title(34))
+                        .foregroundStyle(Theme.Palette.ink)
 
-                Text(strings[isPermission ? .cameraDeniedBody : .cameraMissingBody])
-                    .font(Theme.Fonts.body(18))
-                    .foregroundStyle(Theme.Palette.ink.opacity(0.75))
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 460)
-
-                HStack(spacing: 14) {
-                    if isPermission {
-                        Button(strings[.cameraOpenSettings]) {
-                            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-                            UIApplication.shared.open(url)
-                        }
-                        .buttonStyle(PopupActionButtonStyle())
-                    }
-
-                    Button(strings[.gameplayBack]) {
-                        audio.play(.buttonTap)
-                        viewModel.exit()
-                    }
-                        .buttonStyle(.plain)
-                        .font(Theme.Fonts.label(19))
+                    Text(strings[isPermission ? .cameraDeniedBody : .cameraMissingBody])
+                        .font(Theme.Fonts.body(18))
                         .foregroundStyle(Theme.Palette.ink.opacity(0.75))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 460)
+
+                    HStack(spacing: 14) {
+                        if isPermission {
+                            Button(strings[.cameraOpenSettings]) {
+                                guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                                UIApplication.shared.open(url)
+                            }
+                            .buttonStyle(PopupActionButtonStyle())
+                        }
+
+                        Button(strings[.gameplayBack]) {
+                            audio.play(.buttonTap)
+                            viewModel.exit()
+                        }
+                            .buttonStyle(.plain)
+                            .font(Theme.Fonts.label(19))
+                            .foregroundStyle(Theme.Palette.ink.opacity(0.75))
+                    }
                 }
+                .padding(40)
             }
-            .padding(40)
         }
     }
 }
