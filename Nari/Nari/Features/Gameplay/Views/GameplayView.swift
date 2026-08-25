@@ -79,7 +79,6 @@ struct GameplayView: View {
                         eventFlash
                         greatBanner
                     }
-                    .overlay { freezeFrame }
                     .environment(\.handScreenPositions, handScreenPositions(in: proxy))
                 }
                 .coordinateSpace(.named(GameplayStage.space))
@@ -179,18 +178,28 @@ struct GameplayView: View {
 
     private var hud: some View {
         GeometryReader { proxy in
-            let inset = proxy.size.height * 0.045
+            // The readouts and the side margins are cut from the *shorter*
+            // edge, the way `MenuLayout`'s furniture is. In landscape the
+            // shorter edge is the height and none of this moves; in portrait
+            // the height is the long edge, and measuring against it printed a
+            // score and a clock so large that the two of them together were
+            // wider than the frame holding them — a two-digit score was
+            // already enough to push the clock off the screen.
+            let shortSide = min(proxy.size.width, proxy.size.height)
+            let sideInset = shortSide * 0.045
+            // Kept on the height: this is the margin that holds the top row
+            // clear of the notch and the bottom row clear of the home
+            // indicator, and neither of those moved.
+            let endInset = proxy.size.height * 0.045
+            let readout = shortSide * 0.045
             let card = cueCardSize(in: proxy.size)
 
             ZStack {
                 VStack {
                     HStack(alignment: .top) {
-                        PaintSwatchReadout(text: "\(viewModel.run.score)", fontSize: proxy.size.height * 0.045)
+                        PaintSwatchReadout(text: "\(viewModel.run.score)", fontSize: readout)
                         Spacer(minLength: 0)
-                        PaintSwatchReadout(
-                            text: viewModel.clockText,
-                            fontSize: proxy.size.height * 0.045
-                        )
+                        PaintSwatchReadout(text: viewModel.clockText, fontSize: readout)
                     }
                     Spacer(minLength: 0)
                 }
@@ -207,7 +216,7 @@ struct GameplayView: View {
 
                 VStack {
                     Spacer().frame(height: proxy.size.height * 0.14)
-                    prompt
+                    prompt(width: min(CuePromptView.designWidth, proxy.size.width - sideInset * 2))
                     Spacer(minLength: 0)
                 }
 
@@ -227,7 +236,8 @@ struct GameplayView: View {
                     }
                 }
             }
-            .padding(inset)
+            .padding(.horizontal, sideInset)
+            .padding(.vertical, endInset)
         }
     }
 
@@ -343,43 +353,29 @@ struct GameplayView: View {
         }
     }
 
-    private var prompt: some View {
+    private func prompt(width: CGFloat) -> some View {
         let run = viewModel.run
         return Group {
             switch run.phase {
             case .ngayog:
-                CuePromptView(text: strings[.cueWalk], progress: 0, tint: Theme.Palette.indigo)
+                CuePromptView(text: strings[.cueWalk], progress: 0, tint: Theme.Palette.indigo, maxWidth: width)
             case .squatCue:
-                CuePromptView(text: strings[.cueSquat], progress: run.phaseProgress, tint: Theme.Palette.cueOrange)
+                CuePromptView(text: strings[.cueSquat], progress: run.phaseProgress, tint: Theme.Palette.cueOrange, maxWidth: width)
             case .squatHold:
-                CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect)
+                CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect, maxWidth: width)
             case .freezeGrace:
-                CuePromptView(text: strings[.cueFreeze], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink)
+                CuePromptView(text: strings[.cueFreeze], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink, maxWidth: width)
             case .freezeHold:
-                CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect)
+                CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect, maxWidth: width)
             // The warning carries the same instruction as the dive, and is the
             // half of it the player can still act on.
             case .leyakWarning, .leyakDive:
-                CuePromptView(text: strings[.cueLeyak], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink)
+                CuePromptView(text: strings[.cueLeyak], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink, maxWidth: width)
             case .gameOver:
                 EmptyView()
             }
         }
         .animation(Theme.Motion.cueDrop, value: run.phase.isInterrupt)
-    }
-
-    /// The Freeze cue is signalled by the music cutting out, which is no signal
-    /// at all to a player who is hard of hearing or in a noisy room. The orange
-    /// frame appears at the same instant so the cue is never audio-only.
-    @ViewBuilder
-    private var freezeFrame: some View {
-        if case .freezeGrace = viewModel.run.phase {
-            RoundedRectangle(cornerRadius: 0)
-                .strokeBorder(Theme.Palette.cueOrange, lineWidth: 26)
-                .ignoresSafeArea()
-                .transition(.opacity)
-                .animation(.easeOut(duration: 0.15), value: viewModel.run.phase)
-        }
     }
 
     /// Same corner spot, shape, and orange the tutorial's own back arrow uses
@@ -579,6 +575,14 @@ struct GameplayView: View {
                     .font(Theme.Fonts.title(52))
                     .foregroundStyle(text.color)
                     .shadow(color: Theme.Palette.ink, radius: 0, x: 3, y: 3)
+                    // "KENA LEYAK!" at fifty-two points is wider than a phone
+                    // held upright, and this shares the stage's `ZStack` with
+                    // the HUD — so left to its own width it would not simply
+                    // run off the edge, it would take the HUD off with it.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity)
                     .padding(.bottom, 90)
             }
             .id(viewModel.lastEventAt)

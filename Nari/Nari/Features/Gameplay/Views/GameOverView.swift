@@ -33,42 +33,43 @@ struct GameOverView: View {
     }
 
     var body: some View {
-        ZStack {
-            Theme.Palette.ink.opacity(0.55)
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            let metrics = GameOverMetrics(size: proxy.size)
 
-            // The summary sits as one vertically centred block, so the gap
-            // above it always matches the gap below however tall the video
-            // turns out to be. The close button is deliberately outside it —
-            // it belongs to the corner of the screen, not to the group.
-            VStack(spacing: 44) {
-                HStack(alignment: .center, spacing: 48) {
-                    scoreCard
-                    videoPlayback
-                }
+            ZStack {
+                Theme.Palette.ink.opacity(0.55)
+                    .ignoresSafeArea()
 
-                VStack(spacing: 10) {
-                    actionRow
-                    if let downloadStatus {
-                        Text(downloadStatus)
-                            .font(Theme.Fonts.body(15))
-                            .foregroundStyle(.white.opacity(0.8))
+                // The summary sits as one vertically centred block, so the gap
+                // above it always matches the gap below however tall the video
+                // turns out to be. The close button is deliberately outside it —
+                // it belongs to the corner of the screen, not to the group.
+                VStack(spacing: metrics.blockSpacing) {
+                    summaryPanels(metrics)
+
+                    VStack(spacing: 10) {
+                        actions(metrics)
+                        if let downloadStatus {
+                            Text(downloadStatus)
+                                .font(Theme.Fonts.body(15))
+                                .foregroundStyle(.white.opacity(0.8))
+                        }
                     }
                 }
-            }
-            .padding(32)
-            .opacity(landed ? 1 : 0)
-            .scaleEffect(landed ? 1 : 0.9)
+                .padding(metrics.outerPadding)
+                .opacity(landed ? 1 : 0)
+                .scaleEffect(landed ? 1 : 0.9)
 
-            VStack {
-                HStack {
+                VStack {
+                    HStack {
+                        Spacer()
+                        closeButton(metrics)
+                    }
                     Spacer()
-                    closeButton
                 }
-                Spacer()
+                .padding(metrics.outerPadding)
+                .opacity(landed ? 1 : 0)
             }
-            .padding(32)
-            .opacity(landed ? 1 : 0)
         }
         .onAppear {
             withAnimation(Theme.Motion.cueDrop) { landed = true }
@@ -87,16 +88,35 @@ struct GameOverView: View {
 
     // MARK: - Close
 
-    private var closeButton: some View {
+    private func closeButton(_ metrics: GameOverMetrics) -> some View {
         HandHoverButton(action: onMenu) {
             Image(systemName: "xmark")
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: metrics.closeDiameter * 0.38, weight: .bold))
                 .foregroundStyle(Theme.Palette.ink)
-                .frame(width: 64, height: 64)
+                .frame(width: metrics.closeDiameter, height: metrics.closeDiameter)
                 .background(Circle().fill(.white))
                 .shadow(color: Theme.Palette.ink.opacity(0.3), radius: 0, x: 0, y: 3)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Panels
+
+    /// The score and the run's video, side by side where there is width for
+    /// it and one above the other where there is not.
+    @ViewBuilder
+    private func summaryPanels(_ metrics: GameOverMetrics) -> some View {
+        if metrics.isStacked {
+            VStack(spacing: metrics.pairSpacing) {
+                scoreCard(metrics)
+                videoPlayback(metrics)
+            }
+        } else {
+            HStack(alignment: .center, spacing: metrics.pairSpacing) {
+                scoreCard(metrics)
+                videoPlayback(metrics)
+            }
+        }
     }
 
     // MARK: - Score
@@ -104,42 +124,56 @@ struct GameOverView: View {
     /// Laid out as a stack rather than with hand-placed offsets, so the badge
     /// stays centred under the score whatever it ends up saying — "New High
     /// Score!" and "Best score: 18420" are very different widths.
-    private var scoreCard: some View {
+    private func scoreCard(_ metrics: GameOverMetrics) -> some View {
         VStack(spacing: 6) {
             ZStack(alignment: .topLeading) {
                 Image("bg-white")
                     .resizable()
-                    .frame(width: 340, height: 150)
+                    .frame(width: metrics.cardWidth, height: metrics.cardHeight)
                     .overlay(
                         Text(score.formatted())
-                            .font(.system(size: 56, weight: .heavy, design: .rounded))
+                            .font(.system(size: metrics.scoreFont, weight: .heavy, design: .rounded))
                             .foregroundStyle(Theme.Palette.ink)
                     )
 
-                outlinedTitle
-                    .offset(x: 6, y: -28)
+                outlinedTitle(metrics)
+                    .offset(x: 6, y: -metrics.titleOffset)
             }
+            // The title is drawn outside the card it sits on, by an offset,
+            // which means it costs the stack no height at all. On an iPad
+            // that only ever ate into space there was plenty of; on a phone
+            // in portrait the block is centred to the point, and the title
+            // was the part that went off the top edge. This reserves it.
+            .padding(.top, metrics.titleOffset)
 
-            scoreBadge
+            scoreBadge(metrics)
         }
     }
 
-    private var outlinedTitle: some View {
+    private func outlinedTitle(_ metrics: GameOverMetrics) -> some View {
         Text(strings[.gameOverYourScore])
-            .font(Theme.Fonts.title(42))
+            .font(Theme.Fonts.title(metrics.titleFont))
             .foregroundStyle(Theme.Palette.indigo)
             .outlined(color: .white)
     }
- 
-    private var scoreBadge: some View {
+
+    private func scoreBadge(_ metrics: GameOverMetrics) -> some View {
         Text(isBest
              ? strings[.gameOverNewHighScore]
              : "\(strings[.gameOverBestScoreLabel]): \(bestScore)")
-            .font(Theme.Fonts.label(36))
+            .font(Theme.Fonts.label(metrics.badgeFont))
             .tracking(0.5)
             .foregroundStyle(.white)
-            .padding(.horizontal, 36)
-            .padding(.vertical, 22)
+            // The badge is the one panel whose width is written rather than
+            // drawn, so it is the one that has to be told it may wrap: a long
+            // language and a five-figure best score together are wider than a
+            // phone, and without this the paint runs off both edges.
+            .lineLimit(2)
+            .minimumScaleFactor(0.7)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, metrics.badgeHPadding)
+            .padding(.vertical, metrics.badgeVPadding)
+            .frame(maxWidth: metrics.cardWidth)
             .background(
                 Image("bg-green")
                     .resizable()
@@ -149,26 +183,26 @@ struct GameOverView: View {
     // MARK: - Playback
 
     @ViewBuilder
-    private var videoPlayback: some View {
+    private func videoPlayback(_ metrics: GameOverMetrics) -> some View {
         if let player {
             VideoPlayer(player: player)
-                .frame(width: 320, height: 240)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .frame(width: metrics.videoWidth, height: metrics.videoHeight)
+                .clipShape(RoundedRectangle(cornerRadius: metrics.videoCorner, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: metrics.videoCorner, style: .continuous)
                         .strokeBorder(.white, lineWidth: 3)
                 )
         } else {
-            videoPlaybackPlaceholder
+            videoPlaybackPlaceholder(metrics)
         }
     }
 
     /// Shown until the clip is ready, and left up permanently on a device
     /// that never produces one (the simulator, or recording disabled).
-    private var videoPlaybackPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+    private func videoPlaybackPlaceholder(_ metrics: GameOverMetrics) -> some View {
+        RoundedRectangle(cornerRadius: metrics.videoCorner, style: .continuous)
             .fill(Theme.Palette.ink.opacity(0.3))
-            .frame(width: 320, height: 240)
+            .frame(width: metrics.videoWidth, height: metrics.videoHeight)
             .overlay(
                 Group {
                     if isPreparingVideo {
@@ -177,40 +211,70 @@ struct GameOverView: View {
                             .scaleEffect(1.4)
                     } else {
                         Image(systemName: "play.circle.fill")
-                            .font(.system(size: 48))
+                            .font(.system(size: metrics.videoHeight * 0.2))
                             .foregroundStyle(.white.opacity(0.85))
                     }
                 }
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.videoCorner, style: .continuous)
                     .strokeBorder(.white, lineWidth: 3)
             )
     }
 
     // MARK: - Actions
 
-    private var actionRow: some View {
-        HStack(spacing: 20) {
-            HandHoverButton(action: onRetry) {
-                Label(strings[.gameOverRetry], systemImage: "arrow.counterclockwise")
+    /// A row where three pills fit across, a column where they do not. Three
+    /// full-width pills is also the friendlier shape for the way these are
+    /// really pressed — a hand held over one from across the room.
+    @ViewBuilder
+    private func actions(_ metrics: GameOverMetrics) -> some View {
+        if metrics.isStacked {
+            VStack(spacing: metrics.actionSpacing) {
+                actionButtons(metrics)
             }
-            .buttonStyle(pillStyle)
-
-            HandHoverButton(action: { isSharePresented = true }) {
-                Label(strings[.gameOverShare], systemImage: "square.and.arrow.up")
+            .frame(width: metrics.actionWidth)
+        } else {
+            HStack(spacing: metrics.actionSpacing) {
+                actionButtons(metrics)
             }
-            .buttonStyle(pillStyle)
-
-            HandHoverButton(action: saveRecording) {
-                Label(strings[.gameOverDownload], systemImage: "arrow.down.to.line")
-            }
-            .buttonStyle(pillStyle)
         }
     }
 
-    private var pillStyle: PaintedButtonStyle {
-        PaintedButtonStyle(fill: Theme.Palette.cueOrange, textColor: .white, borderColor: .white, height: 72, fontSize: 24)
+    @ViewBuilder
+    private func actionButtons(_ metrics: GameOverMetrics) -> some View {
+        HandHoverButton(action: onRetry) {
+            actionLabel(strings[.gameOverRetry], symbol: "arrow.counterclockwise", metrics)
+        }
+        .buttonStyle(pillStyle(metrics))
+
+        HandHoverButton(action: { isSharePresented = true }) {
+            actionLabel(strings[.gameOverShare], symbol: "square.and.arrow.up", metrics)
+        }
+        .buttonStyle(pillStyle(metrics))
+
+        HandHoverButton(action: saveRecording) {
+            actionLabel(strings[.gameOverDownload], symbol: "arrow.down.to.line", metrics)
+        }
+        .buttonStyle(pillStyle(metrics))
+    }
+
+    /// Stretched in a column so the three pills share one width — a stack of
+    /// pills each cut to its own word reads as three unrelated things.
+    private func actionLabel(_ text: String, symbol: String, _ metrics: GameOverMetrics) -> some View {
+        Label(text, systemImage: symbol)
+            .lineLimit(1)
+            .frame(maxWidth: metrics.isStacked ? .infinity : nil)
+    }
+
+    private func pillStyle(_ metrics: GameOverMetrics) -> PaintedButtonStyle {
+        PaintedButtonStyle(
+            fill: Theme.Palette.cueOrange,
+            textColor: .white,
+            borderColor: .white,
+            height: metrics.buttonHeight,
+            fontSize: metrics.buttonFont
+        )
     }
 
     // MARK: - Download
@@ -241,7 +305,7 @@ struct GameOverView: View {
 
     @MainActor
     private func saveScoreCardImage() {
-        let renderer = ImageRenderer(content: scoreCard.padding(20).background(Theme.Palette.ochreLight))
+        let renderer = ImageRenderer(content: scoreCard(.reference).padding(20).background(Theme.Palette.ochreLight))
         renderer.scale = UIScreen.main.scale
         guard let image = renderer.uiImage else { return }
 
@@ -266,6 +330,99 @@ struct GameOverView: View {
             try? await Task.sleep(for: .seconds(2))
             withAnimation { downloadStatus = nil }
         }
+    }
+}
+
+/// Sizes for the summary, derived from the stage.
+///
+/// The screen was drawn against an iPad in landscape, where the score card and
+/// the run's video sit happily side by side over a row of three pills. A phone
+/// in portrait has the width for neither: the video went off one edge and
+/// Download off the other, and Play Again broke onto two lines trying to fit
+/// what was left. So a portrait stage stacks the two panels, turns the row
+/// into a column, and everything shrinks together to whatever room there
+/// actually is — rather than one part holding its drawn size while the rest
+/// is squeezed around it.
+struct GameOverMetrics {
+    /// Portrait puts the video under the score and the pills in a column;
+    /// landscape keeps the pairing and the row this screen was drawn as.
+    let isStacked: Bool
+    let outerPadding: CGFloat
+    /// Between the panels and the actions under them.
+    let blockSpacing: CGFloat
+    /// Between the score card and the video, whichever way they are arranged.
+    let pairSpacing: CGFloat
+    let cardWidth: CGFloat
+    let cardHeight: CGFloat
+    let scoreFont: CGFloat
+    let titleFont: CGFloat
+    let titleOffset: CGFloat
+    let badgeFont: CGFloat
+    let badgeHPadding: CGFloat
+    let badgeVPadding: CGFloat
+    let videoWidth: CGFloat
+    let videoHeight: CGFloat
+    let videoCorner: CGFloat
+    let buttonHeight: CGFloat
+    let buttonFont: CGFloat
+    let actionSpacing: CGFloat
+    /// The shared width of a column of pills. Nil in the row, where each pill
+    /// is still cut to its own word.
+    let actionWidth: CGFloat?
+    let closeDiameter: CGFloat
+
+    /// The layout at the size it was drawn at, for rendering the score card
+    /// into a photo: what gets saved to the library should not depend on which
+    /// way the phone happened to be held when the run ended.
+    static let reference = GameOverMetrics(size: CGSize(width: 1194, height: 834))
+
+    init(size: CGSize) {
+        let width = max(size.width, 1)
+        let height = max(size.height, 1)
+        let stacked = height > width
+        isStacked = stacked
+
+        let padding: CGFloat = 32
+        let room = CGSize(
+            width: max(width - padding * 2, 1),
+            height: max(height - padding * 2, 1)
+        )
+
+        // What each arrangement wants at full size. The heights carry the
+        // spacings and the title's overhang above the card as well as the
+        // panels, so the scale below is measured against the whole block
+        // rather than against its largest piece.
+        let wanted = stacked
+            ? CGSize(width: 340, height: 860)
+            : CGSize(width: 708, height: 420)
+
+        // Shrunk to whichever edge runs out first, and never grown past the
+        // size this was drawn at — an iPad has room to spare and does not need
+        // a bigger score card, it needs the same one with more air around it.
+        let scale = min(
+            room.width / wanted.width,
+            room.height / wanted.height
+        ).clamped(to: 0.45...1)
+
+        outerPadding = padding * scale
+        blockSpacing = 44 * scale
+        pairSpacing = (stacked ? 24 : 48) * scale
+        cardWidth = 340 * scale
+        cardHeight = 150 * scale
+        scoreFont = 56 * scale
+        titleFont = 42 * scale
+        titleOffset = 28 * scale
+        badgeFont = 36 * scale
+        badgeHPadding = 36 * scale
+        badgeVPadding = 22 * scale
+        videoWidth = 320 * scale
+        videoHeight = 240 * scale
+        videoCorner = 16 * scale
+        buttonHeight = 72 * scale
+        buttonFont = 24 * scale
+        actionSpacing = (stacked ? 12 : 20) * scale
+        actionWidth = stacked ? min(340 * scale, room.width) : nil
+        closeDiameter = (64 * scale).clamped(to: 44...64)
     }
 }
 

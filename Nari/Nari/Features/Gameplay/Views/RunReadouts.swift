@@ -77,10 +77,30 @@ struct PoseCueCard: View {
 
 /// The banner across the top telling the player what to do right now, with the
 /// cue window draining underneath it.
+///
+/// One width for every cue, and never wider than the stage it is printed on.
+/// The swatch shares a `ZStack` with the score, the meter and the pause
+/// button, so it does not merely overflow when it is too wide — it makes the
+/// whole stack too wide, and takes all of them off the right edge with it.
+/// That is what a phone in portrait showed on every cue except the walk, the
+/// one cue with no draining bar under it and so the only one narrow enough
+/// to fit.
 struct CuePromptView: View {
     let text: String
     let progress: Double
     let tint: Color
+    /// The widest the swatch may print. Left at the width it was drawn for,
+    /// so anywhere with room to spare looks exactly as it always has.
+    var maxWidth: CGFloat = CuePromptView.designWidth
+
+    /// The bar plus the swatch's own margins, which is what this was drawn as.
+    static let designWidth: CGFloat = 400
+    private static let margin: CGFloat = 40
+
+    /// Room left for the word and the bar under it.
+    private var contentWidth: CGFloat {
+        max(maxWidth - Self.margin * 2, 1)
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -88,6 +108,11 @@ struct CuePromptView: View {
                 .font(Theme.Fonts.title(46))
                 .foregroundStyle(Theme.Palette.cream)
                 .tracking(3)
+                // A cue is one word and reads as one: a long one in a narrow
+                // stage shrinks rather than wrapping, and shrinks rather than
+                // pushing the swatch out past the room it was given.
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .shadow(color: Theme.Palette.ink, radius: 0, x: 3, y: 3)
 
             if progress > 0 {
@@ -102,10 +127,12 @@ struct CuePromptView: View {
                         }
                     }
                     .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: 3))
-                    .frame(width: 320)
             }
         }
-        .padding(.horizontal, 40)
+        // Written once here rather than on the bar, where it used to be a flat
+        // 320 that the word above it was free to overhang.
+        .frame(width: contentWidth)
+        .padding(.horizontal, Self.margin)
         .padding(.vertical, 16)
         .background(BrushSwatchShape(seed: 11, roughness: 0.09).fill(tint.opacity(0.92)))
     }
