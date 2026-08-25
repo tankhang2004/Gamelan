@@ -66,6 +66,20 @@ final class SessionRecorder {
         isRecording = false
         recorder.stopRecording { _, _ in }
     }
+
+    /// Throws the current run's footage away and opens a fresh clip for the
+    /// next one. Awaits the stop rather than firing both off together:
+    /// ReplayKit refuses a `startRecording` that lands while the previous
+    /// recording is still closing, and Play Again does exactly that.
+    func restart() async {
+        if isRecording {
+            isRecording = false
+            await withCheckedContinuation { continuation in
+                recorder.stopRecording { _, _ in continuation.resume() }
+            }
+        }
+        start()
+    }
 }
 
 private extension Logger {

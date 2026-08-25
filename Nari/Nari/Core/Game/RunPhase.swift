@@ -26,6 +26,10 @@ enum RunPhase: Equatable, Sendable {
     case freezeGrace(side: AgemSide, remaining: Double)
     /// The pose locked in and is being held.
     case freezeHold(side: AgemSide, elapsed: Double)
+    /// The column a Leyak is about to come down is lit up, but nothing is
+    /// falling yet. `column` is where it will fall, in normalized image x;
+    /// `remaining` counts down to the dive.
+    case leyakWarning(column: CGFloat, remaining: Double)
     /// A Leyak is diving down the room and has to be side-stepped. `column` is
     /// where it will fall, in normalized image x; `progress` runs 0 to 1 as it
     /// comes down.
@@ -35,7 +39,7 @@ enum RunPhase: Equatable, Sendable {
     var isInterrupt: Bool {
         switch self {
         case .ngayog, .gameOver: false
-        case .squatCue, .squatHold, .freezeGrace, .freezeHold, .leyakDive: true
+        case .squatCue, .squatHold, .freezeGrace, .freezeHold, .leyakWarning, .leyakDive: true
         }
     }
 
@@ -43,7 +47,15 @@ enum RunPhase: Equatable, Sendable {
     var cuedSide: AgemSide? {
         switch self {
         case .freezeGrace(let side, _), .freezeHold(let side, _): side
-        case .ngayog, .squatCue, .squatHold, .leyakDive, .gameOver: nil
+        case .ngayog, .squatCue, .squatHold, .leyakWarning, .leyakDive, .gameOver: nil
+        }
+    }
+
+    /// Where a Leyak is aimed, while one is either being flagged or falling.
+    var leyakColumn: CGFloat? {
+        switch self {
+        case .leyakWarning(let column, _), .leyakDive(let column, _): column
+        default: nil
         }
     }
 }

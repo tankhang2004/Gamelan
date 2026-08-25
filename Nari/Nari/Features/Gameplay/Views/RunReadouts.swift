@@ -28,6 +28,10 @@ struct PoseCueCard: View {
     let title: String
     let artworkName: String?
     let symbolName: String
+    /// How much of the painted backing is left. Kept low so the card reads as
+    /// a reference held up over the room rather than a panel bolted across it
+    /// — the player has to see themselves through the corner it occupies.
+    var backingOpacity: Double = 0.22
 
     var body: some View {
         VStack(spacing: 10) {
@@ -55,6 +59,10 @@ struct PoseCueCard: View {
 
             Spacer(minLength: 0)
         }
+        // The dancer and her name keep their own shadow now that there is no
+        // solid card behind them: ink on a bright camera frame is otherwise
+        // only as readable as whatever happens to be in shot.
+        .shadow(color: Theme.Palette.paper.opacity(0.9), radius: 3)
         .padding(.horizontal, 26)
         .padding(.vertical, 30)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -62,8 +70,8 @@ struct PoseCueCard: View {
             Image("banner-yellow")
                 .resizable()
                 .scaledToFill()
+                .opacity(backingOpacity)
         )
-        .shadow(color: Theme.Palette.ink.opacity(0.3), radius: 12, x: -3, y: 6)
     }
 }
 

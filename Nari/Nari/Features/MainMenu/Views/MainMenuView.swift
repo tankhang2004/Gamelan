@@ -17,17 +17,30 @@ struct MainMenuView: View {
 
             ZStack {
                 PaintTexture()
+                // Held to the stage in every orientation. A `scaledToFill`
+                // image overflows the size it was offered, and an unclipped
+                // one hands that overflowed size back to the ZStack as the
+                // stack's own — which the `Spacer`-driven chrome then lays
+                // itself out against, putting its corners outside the screen.
+                //
+                // Which way it overflows depends on the shape of the window
+                // against this artwork's 1.43, so there is no orientation this
+                // is safe to skip: an iPhone in portrait runs about 850 points
+                // wide, an iPhone in landscape 200 points tall, an iPad in
+                // landscape a hundred wide.
                 Image("bg-yellow")
                             .resizable()
                             .scaledToFill()
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .clipped()
                 Image("dancer")
                     .resizable()
                     .scaledToFit()
-                    .offset(x:60, y:30)
+                    .offset(x: layout.dancerOffset.width, y: layout.dancerOffset.height)
                     .frame(height: layout.dancerHeight)
                             .opacity(viewModel.isContentVisible ? 1 : 0)
                             .scaleEffect(
-                                viewModel.isContentVisible ? 1.4 : 0.96,
+                                viewModel.isContentVisible ? layout.dancerBloom : 0.96,
                                 anchor: .center
                             )
                             .animation(

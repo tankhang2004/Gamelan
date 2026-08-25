@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import OSLog
 import Observation
 
 /// What the body-tracking layer saw this frame, reduced to the three questions
@@ -52,6 +53,7 @@ final class RunEngine {
         case .squatHold(let held): holdTotal > 0 ? held / holdTotal : 0
         case .freezeGrace(_, let remaining): 1 - remaining / rules.freezeGracePeriod
         case .freezeHold(_, let held): holdTotal > 0 ? held / holdTotal : 0
+        case .leyakWarning(_, let remaining): 1 - remaining / rules.leyakWarningSeconds
         case .leyakDive(_, let progress): progress
         case .ngayog, .gameOver: 0
         }
@@ -84,6 +86,22 @@ final class RunEngine {
         self.interruptInterval = rules.initialInterruptInterval
         self.freezeChance = rules.initialFreezeChance
         scheduleNextInterrupt()
+        warnIfSquatsAreCrowdedOut()
+    }
+
+    /// Says so once, at the top of a run, if the chances are tuned past what
+    /// the roll can hold. `interruptCuts` will keep the loop honest either
+    /// way, but a clamp nobody is told about is the same silence this guards
+    /// against — the point is that a mis-tune is visible while it is being
+    /// tuned, not that it is survivable.
+    private func warnIfSquatsAreCrowdedOut() {
+        let claimed = rules.leyakChance + rules.maximumFreezeChance
+        let budget = 1 - rules.minimumSquatChance
+        guard claimed > budget else { return }
+
+        Logger.run.warning(
+            "Leyak \(self.rules.leyakChance, privacy: .public) + Freeze up to \(self.rules.maximumFreezeChance, privacy: .public) claims \(claimed, privacy: .public) of the interrupt roll, past the \(budget, privacy: .public) left by minimumSquatChance. Freeze will be capped short of its maximum so Nge'ed keeps its share."
+        )
     }
 
     // MARK: - Ticking
@@ -110,6 +128,8 @@ final class RunEngine {
             advanceFreezeGrace(side: side, remaining: remaining, delta: delta, input: input, events: &events)
         case .freezeHold(let side, let held):
             advanceFreezeHold(side: side, held: held, delta: delta, input: input, events: &events)
+        case .leyakWarning(let column, let remaining):
+            advanceLeyakWarning(column: column, remaining: remaining, delta: delta)
         case .leyakDive(let column, let progress):
             advanceLeyakDive(column: column, progress: progress, delta: delta, input: input, events: &events)
         case .gameOver:
@@ -150,9 +170,10 @@ final class RunEngine {
         // Rolled before the lockouts are checked, so an early Freeze or Leyak
         // is suppressed rather than re-rolled into a squat that was never
         // drawn.
+        let cuts = interruptCuts
         let roll = Double.random(in: 0..<1, using: &generator)
-        let rolledLeyak = roll < rules.leyakChance
-        let rolledFreeze = !rolledLeyak && roll < rules.leyakChance + freezeChance
+        let rolledLeyak = roll < cuts.leyak
+        let rolledFreeze = !rolledLeyak && roll < cuts.freeze
 
         coinField.clear()
 
@@ -160,8 +181,12 @@ final class RunEngine {
             // It falls where the player is standing. A Leyak that spawned at
             // random would mostly miss on its own, which teaches nothing —
             // aiming it is what makes the dodge the whole point.
+            //
+            // Aimed here rather than when the dive starts, so the flagged
+            // column is a promise: stepping out of it during the warning is
+            // what saves the player, and it cannot follow them.
             let column = input.playerCenter?.x ?? 0.5
-            phase = .leyakDive(column: column, progress: 0)
+            phase = .leyakWarning(column: column, remaining: rules.leyakWarningSeconds)
             events.append(.leyakCued)
         } else if rolledFreeze, elapsed >= rules.freezeLockout {
             let side = AgemSide.allCases.randomElement(using: &generator) ?? .kanan
@@ -170,6 +195,18 @@ final class RunEngine {
         } else {
             phase = .squatCue(remaining: rules.squatGracePeriod)
             events.append(.squatCued)
+        }
+    }
+
+    /// The column lit up before anything falls down it. Nothing can be hit
+    /// here — this is purely the window the player gets to read where it is
+    /// coming and start moving.
+    private func advanceLeyakWarning(column: CGFloat, remaining: Double, delta: Double) {
+        let left = remaining - delta
+        if left <= 0 {
+            phase = .leyakDive(column: column, progress: 0)
+        } else {
+            phase = .leyakWarning(column: column, remaining: left)
         }
     }
 
@@ -321,6 +358,20 @@ final class RunEngine {
         timeToNextInterrupt = Double.random(in: interruptInterval, using: &generator)
     }
 
+    /// Where the two cuts fall on the 0–1 interrupt roll: below `leyak` is a
+    /// Leyak, below `freeze` is a Freeze, and the rest of the line is a squat.
+    ///
+    /// Both are held inside a budget that leaves `minimumSquatChance` of the
+    /// line unclaimed, so the squat band can never be squeezed shut by the two
+    /// bands in front of it. Leyak is clamped first because it is rolled
+    /// first; with the shipped numbers neither clamp binds, and this only
+    /// comes into play if the chances are retuned past what the line can hold.
+    private var interruptCuts: (leyak: Double, freeze: Double) {
+        let budget = max(0, 1 - rules.minimumSquatChance)
+        let leyak = min(rules.leyakChance, budget)
+        return (leyak, min(leyak + freezeChance, budget))
+    }
+
     /// Every 45 seconds survived the interval shrinks and Freeze gets likelier,
     /// both stopping at a floor so a long run stays playable rather than
     /// becoming a wall.
@@ -360,4 +411,8 @@ final class RunEngine {
         phase = .gameOver
         events.append(.gameOver(score: score))
     }
+}
+
+private extension Logger {
+    static let run = Logger(subsystem: "com.yuknari.Nari", category: "run")
 }

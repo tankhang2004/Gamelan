@@ -83,6 +83,11 @@ struct RunRules: Sendable {
 
     // MARK: - Leyak (the dodge)
 
+    /// How long the column it is about to fall down is flagged before it
+    /// actually appears. The Leyak is aimed at wherever the player is standing
+    /// when it is rolled, so without a telegraph the only way to learn the
+    /// dodge is to be hit by it once.
+    var leyakWarningSeconds: Double = 1.2
     /// How long the Leyak takes to come down the room.
     ///
     /// Long enough to see it, read where it is falling, and walk out of the
@@ -99,9 +104,23 @@ struct RunRules: Sendable {
     var leyakDodgedScore: Int = 40
     var leyakDodgedEnergy: Double = 5
     /// Chance the shared interrupt timer picks the Leyak.
-    var leyakChance: Double = 0.20
+    ///
+    /// Rolled ahead of Freeze off the same number, and never touched by the
+    /// difficulty ramp, so this is the share of interrupts a Leyak takes for
+    /// the whole run. What the ramp adds to Freeze comes out of Squat.
+    var leyakChance: Double = 1.0 / 3
     /// No Leyak this early into a run — same reasoning as `freezeLockout`.
     var leyakLockout: Double = 20
+
+    /// The share of interrupts held back for Nge'ed, whatever the other two
+    /// are tuned to.
+    ///
+    /// Squat is not picked by the roll — it is what is left of it once Leyak
+    /// and Freeze have taken their bands. That makes it the one move that can
+    /// be tuned out of existence without anything looking wrong: raise the
+    /// other two past 1 between them and the squat band simply closes. This
+    /// floor is what stops that happening quietly.
+    var minimumSquatChance: Double = 0.15
 
     // MARK: - Frangipanis (gathered during the march)
 

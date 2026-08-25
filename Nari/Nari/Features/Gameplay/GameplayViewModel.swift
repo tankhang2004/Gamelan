@@ -223,6 +223,14 @@ final class GameplayViewModel {
             return
         }
 
+        // Asked for here rather than when scoring starts, because ReplayKit's
+        // consent alert appears wherever `start()` is called — and by the time
+        // the countdown ends the player has walked back to their mark, several
+        // metres from an iPad now showing a dialog they have to come back to
+        // dismiss. Tapping Ready is the last moment they are still within
+        // arm's reach of it.
+        recorder.start()
+
         beginCalibration()
         consume()
     }
@@ -240,11 +248,14 @@ final class GameplayViewModel {
 
     /// Starts a whole new run from the game over screen.
     func retry() {
-        recorder.cancel()
         run = RunEngine()
         tracker.reset()
         lastEvent = nil
         beginCalibration()
+        // The clip the player has just been offered is finished with, and the
+        // new run needs one of its own. Nothing else reopens it now that the
+        // countdown no longer does.
+        Task { await recorder.restart() }
     }
 
     func exit() {
@@ -327,9 +338,6 @@ final class GameplayViewModel {
         if left <= 0 {
             phase = .playing
             bodyLostSeconds = 0
-            // A no-op if a pause-and-resume is what brought the player back
-            // here — the whole run gets one clip, not one per re-entry.
-            recorder.start()
         } else {
             phase = .starting(remaining: left)
         }

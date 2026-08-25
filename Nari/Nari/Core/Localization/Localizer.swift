@@ -107,6 +107,7 @@ struct Localizer: Equatable, Sendable {
         .tutorialTitle: "Siapkan Ruangmu",
         .tutorialSetup: "Letakkan iPad di lantai tegak, tekan SIAP, dan mundur.",
         .tutorialStart: "SIAP",
+        .tutorialPreparing: "Menyiapkan kamera\u{2026}",
 
         .cameraFieldWide: "Lebar",
         .cameraFieldStandard: "Normal",
@@ -218,6 +219,7 @@ struct Localizer: Equatable, Sendable {
         .tutorialTitle: "Set Up Your Space",
         .tutorialSetup: "Set your iPad upright on the floor, press READY, and step back",
         .tutorialStart: "READY",
+        .tutorialPreparing: "Getting the camera ready\u{2026}",
 
         .cameraFieldWide: "Wide",
         .cameraFieldStandard: "Normal",

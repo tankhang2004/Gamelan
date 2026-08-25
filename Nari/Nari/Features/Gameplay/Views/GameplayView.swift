@@ -14,10 +14,15 @@ struct GameplayView: View {
     var body: some View {
         ZStack {
             switch viewModel.phase {
-            case .tutorial:
+            // `.preparing` stays on this screen rather than moving on to the
+            // stage: it is the stretch where the camera is being switched on,
+            // and the player is better told that under the button they just
+            // pressed than shown an empty stage that looks like a hang.
+            case .tutorial, .preparing:
                 TutorialView(
                     session: viewModel.captureSession,
                     onPreviewReady: { viewModel.attachPreview($0) },
+                    isStarting: viewModel.phase == .preparing,
                     onStart: { Task { await viewModel.startSession() } },
                     onBack: { viewModel.exit() }
                 )
@@ -27,7 +32,7 @@ struct GameplayView: View {
             case .unavailable(let problem):
                 unavailable(problem)
 
-            case .preparing, .calibrating, .starting, .playing, .paused, .gameOver:
+            case .calibrating, .starting, .playing, .paused, .gameOver:
                 stage
             }
         }
@@ -101,6 +106,17 @@ struct GameplayView: View {
                     FootSparksView(sparks: viewModel.footSparks, mapper: mapper)
                 }
 
+                // Under the Leyak but over the player, so the flagged floor
+                // reads as somewhere to step out of rather than something
+                // painted on the lens.
+                if case .leyakWarning(let column, let remaining) = viewModel.run.phase {
+                    LeyakWarningView(
+                        column: column,
+                        progress: 1 - remaining / RunRules.default.leyakWarningSeconds,
+                        mapper: mapper
+                    )
+                }
+
                 // Over the player, because a Leyak the player is standing
                 // behind is not a threat anyone would move away from.
                 if case .leyakDive(let column, let progress) = viewModel.run.phase {
@@ -134,6 +150,7 @@ struct GameplayView: View {
     private var hud: some View {
         GeometryReader { proxy in
             let inset = proxy.size.height * 0.045
+            let card = cueCardSize(in: proxy.size)
 
             ZStack {
                 VStack {
@@ -154,8 +171,7 @@ struct GameplayView: View {
                         .padding(.vertical, proxy.size.height * 0.14)
                     Spacer(minLength: 0)
                     cueCard
-                        .frame(width: proxy.size.width * 0.19)
-                        .padding(.vertical, proxy.size.height * 0.16)
+                        .frame(width: card.width, height: card.height)
                         .animation(Theme.Motion.cueDrop, value: cueCardIdentity)
                 }
 
@@ -183,6 +199,24 @@ struct GameplayView: View {
             }
             .padding(inset)
         }
+    }
+
+    /// How big the reference card is drawn on this stage.
+    ///
+    /// Landscape gives it a slice of the width and most of the height, which
+    /// is what it was designed against. Portrait cannot use the same fractions:
+    /// a fifth of an iPhone's width is about seventy points, and the card's own
+    /// side padding eats nearly all of that before a dancer is drawn in it — the
+    /// card was still on screen, just squeezed to a sliver. So portrait sizes it
+    /// against the width it actually has, holds it to a card-shaped block rather
+    /// than a full-height strip, and caps it so an iPad in portrait does not hand
+    /// a third of the room to the reference.
+    private func cueCardSize(in size: CGSize) -> (width: CGFloat, height: CGFloat) {
+        guard size.height > size.width else {
+            return (size.width * 0.19, size.height * 0.68)
+        }
+        let width = (size.width * 0.34).clamped(to: 132...260)
+        return (width, min(width * 1.5, size.height * 0.34))
     }
 
     private var coins: some View {
@@ -293,7 +327,9 @@ struct GameplayView: View {
                 CuePromptView(text: strings[.cueFreeze], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink)
             case .freezeHold:
                 CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect)
-            case .leyakDive:
+            // The warning carries the same instruction as the dive, and is the
+            // half of it the player can still act on.
+            case .leyakWarning, .leyakDive:
                 CuePromptView(text: strings[.cueLeyak], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink)
             case .gameOver:
                 EmptyView()
@@ -350,12 +386,6 @@ struct GameplayView: View {
     @ViewBuilder
     private var phaseOverlay: some View {
         switch viewModel.phase {
-        case .preparing:
-            ZStack {
-                banner(title: strings[.calibrationTitle], subtitle: strings[.calibrationSearching])
-                backToHomeCorner
-            }
-
         case .calibrating:
             ZStack {
 //                Image("overlay-calib")
@@ -409,7 +439,8 @@ struct GameplayView: View {
                 onMenu: { viewModel.exit() }
             )
 
-        case .tutorial, .playing, .unavailable:
+        // `.preparing` never reaches the stage — it is drawn by `TutorialView`.
+        case .tutorial, .preparing, .playing, .unavailable:
             EmptyView()
         }
     }
