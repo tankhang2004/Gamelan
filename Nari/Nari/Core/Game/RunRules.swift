@@ -87,10 +87,8 @@ struct RunRules: Sendable {
     /// banner. Flat rather than dripped per second because the banner
     /// states one number, and a payout that varied with the meter would
     /// make that number a lie most of the time.
-    /// Nothing: holding the agem keeps the meter where it is rather than
-    /// topping it up. Taksu is spent on the moves that go wrong, and earned
-    /// back by marching — an agem pays in points.
-    var freezeHoldEnergy: Double = 0
+    /// What the "GREAT AGEM" banner promises, so the banner stays honest.
+    var freezeHoldEnergy: Double = 15
     var freezeHoldScore: Int = 100
 
     // MARK: - Leyak (the dodge)
