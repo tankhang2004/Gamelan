@@ -34,6 +34,7 @@ struct MotionTracker {
 
         squat.update(snapshot, delta: delta)
         input.isSquatting = squat.isSquatting
+        input.squatBegan = squat.didStartSquat
 
         let frame = BodyFrame(snapshot: snapshot)
         bodyFrame = frame

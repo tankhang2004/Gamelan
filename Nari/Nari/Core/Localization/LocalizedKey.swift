@@ -94,6 +94,9 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case scoresTitle
     case scoresEmpty
     case scoresSignInRequired
+    case scoresNotConfigured
+    case scoresLoadFailed
+    case scoresRetry
     case scoresYou
 
     // Play

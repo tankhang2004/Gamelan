@@ -9,8 +9,12 @@ import Observation
 struct RunInput: Sendable {
     /// A foot landed on this frame — one beat of the march.
     var completedNgayogCycle = false
-    /// The player is currently below the squat threshold.
+    /// The player is currently below the squat threshold. Used for holding a
+    /// squat, where staying down is the whole task.
     var isSquatting = false
+    /// The player dropped into a squat on this frame. Used for answering a
+    /// squat cue, which asks for a squat rather than for already being down.
+    var squatBegan = false
     /// All nine tracked points are inside the cued pose right now.
     var matchesCuedPose = false
     /// Wrists and ankles in normalized image space — a flower is caught with
@@ -254,7 +258,7 @@ final class RunEngine {
         input: RunInput,
         events: inout [RunEvent]
     ) {
-        if input.isSquatting {
+        if input.squatBegan {
             change(energy: rules.squatHitEnergy)
             score += rules.squatHitScore
             events.append(.squatHit)

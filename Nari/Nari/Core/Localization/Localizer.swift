@@ -67,6 +67,9 @@ struct Localizer: Equatable, Sendable {
         .scoresTitle: "Papan Peringkat",
         .scoresEmpty: "Belum ada skor di papan peringkat.\nJadilah yang pertama!",
         .scoresSignInRequired: "Masuk ke Game Center untuk melihat papan peringkat dunia.",
+        .scoresNotConfigured: "Papan peringkat dunia belum aktif.\nSkormu tetap tersimpan di perangkat ini.",
+        .scoresLoadFailed: "Papan peringkat gagal dimuat.\nPeriksa koneksi internetmu.",
+        .scoresRetry: "Coba Lagi",
         .scoresYou: "Kamu",
 
         .settingsTitle: "Pengaturan",
@@ -180,6 +183,9 @@ struct Localizer: Equatable, Sendable {
         .scoresTitle: "Leaderboard",
         .scoresEmpty: "No scores on the board yet.\nBe the first!",
         .scoresSignInRequired: "Sign in to Game Center to see the world leaderboard.",
+        .scoresNotConfigured: "The world leaderboard isn't live yet.\nYour scores are still saved on this device.",
+        .scoresLoadFailed: "Couldn't load the leaderboard.\nCheck your connection.",
+        .scoresRetry: "Try Again",
         .scoresYou: "You",
 
         .settingsTitle: "Settings",

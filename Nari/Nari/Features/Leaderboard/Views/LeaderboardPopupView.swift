@@ -32,8 +32,8 @@ struct LeaderboardPopupView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 60)
 
-        case .signedOut:
-            message(strings[.scoresSignInRequired], symbol: "person.crop.circle.badge.exclamationmark")
+        case .unavailable(let reason):
+            message(text(for: reason), symbol: symbol(for: reason), canRetry: reason != .notConfigured)
 
         case .loaded(let rows) where rows.isEmpty:
             message(strings[.scoresEmpty], symbol: "trophy")
@@ -43,29 +43,68 @@ struct LeaderboardPopupView: View {
         }
     }
 
-    private func message(_ text: String, symbol: String) -> some View {
+    private func message(_ text: String, symbol: String, canRetry: Bool = false) -> some View {
         VStack(spacing: 10) {
             Image(systemName: symbol)
                 .font(.system(size: 44, weight: .light))
             Text(text)
                 .font(Theme.Fonts.body(19))
                 .multilineTextAlignment(.center)
+                // Without this the popup's fixed height squeezes the label back
+                // to one line and truncates the rest.
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Offered only where trying again can change the answer: a player
+            // who signs in from Settings, or a connection that comes back.
+            if canRetry {
+                Button(strings[.scoresRetry]) {
+                    Task { await viewModel.load() }
+                }
+                .buttonStyle(PopupActionButtonStyle())
+                .padding(.top, 14)
+            }
         }
         .foregroundStyle(Theme.Palette.ink.opacity(0.55))
         .frame(maxWidth: .infinity)
         .padding(.vertical, 34)
     }
 
+    private func text(for reason: LeaderboardUnavailableReason) -> String {
+        switch reason {
+        case .signedOut: strings[.scoresSignInRequired]
+        case .notConfigured: strings[.scoresNotConfigured]
+        case .loadFailed: strings[.scoresLoadFailed]
+        }
+    }
+
+    private func symbol(for reason: LeaderboardUnavailableReason) -> String {
+        switch reason {
+        case .signedOut: "person.crop.circle.badge.exclamationmark"
+        case .notConfigured: "trophy"
+        case .loadFailed: "wifi.exclamationmark"
+        }
+    }
+
     private func board(_ rows: [LeaderboardEntry]) -> some View {
         VStack(spacing: 0) {
             columnHeader
 
-            VStack(spacing: 12) {
-                ForEach(rows) { entry in
-                    row(entry)
+            // Only the rows scroll, so the column titles stay put and the
+            // pinned local-player row stays reachable: iPhone landscape fits
+            // about five of the seven rows a full board can hold.
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(rows) { entry in
+                        row(entry)
+                    }
                 }
+                .padding(.top, 16)
+                .padding(.trailing, 6)
             }
-            .padding(.top, 16)
+            // No fade mask here, unlike the credits: these rows are discrete,
+            // so a half-cut row already reads as "there is more", while a fade
+            // would dim the last row on iPad where the whole board fits.
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 
@@ -142,7 +181,7 @@ private final class PreviewLeaderboardService: LeaderboardProviding {
     func authenticate() async {}
     func submit(score: Int) async {}
 
-    func loadLeaderboard(topCount: Int) async -> (top: [LeaderboardEntry], localPlayer: LeaderboardEntry?) {
+    func loadLeaderboard(topCount: Int) async -> LeaderboardResult {
         let top = [
             LeaderboardEntry(id: "1", rank: 1, displayName: "ROO", score: 30920, isLocalPlayer: false),
             LeaderboardEntry(id: "2", rank: 2, displayName: "ZOO", score: 30000, isLocalPlayer: false),
@@ -152,6 +191,6 @@ private final class PreviewLeaderboardService: LeaderboardProviding {
             LeaderboardEntry(id: "6", rank: 6, displayName: "NOO", score: 27800, isLocalPlayer: false),
         ]
         let localPlayer = LeaderboardEntry(id: "me", rank: 100, displayName: "You", score: 12003, isLocalPlayer: true)
-        return (top, localPlayer)
+        return .entries(top: top, localPlayer: localPlayer)
     }
 }

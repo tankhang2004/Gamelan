@@ -160,7 +160,7 @@ To record real ones, run with `-debugPrintPose`, stand in the pose, and copy the
 target lines printed to the console once per second:
 
 ```bash
-xcrun simctl launch booted com.yuknari.Nari -debugPrintPose
+xcrun simctl launch booted com.ntkl.Nari -debugPrintPose
 ```
 
 The simulator has no camera, so `AppServices.makeBodyPoseSource()` hands back
@@ -209,6 +209,37 @@ printed on, and `BrushSwatchShape` for the score, timer, and Game Over marks.
 Each shape is seeded from a fixed number so its silhouette never changes between
 redraws — an unseeded shape would boil.
 
+## Leaderboard
+
+The world board is Game Center, in `GameCenterService`. The code path is complete
+— sign-in, submit on game over, and the top six with the local player pinned
+underneath — but Game Center serves an **empty board until a matching leaderboard
+exists in App Store Connect**, which is a console step, not a code one.
+
+To turn it on:
+
+1. In App Store Connect, create an app record for bundle ID `com.ntkl.Nari`
+   (the value of `PRODUCT_BUNDLE_IDENTIFIER`, and it must match exactly).
+2. On that record: **Services → Game Center → Leaderboards → +**, single
+   leaderboard, score format Integer, sort High to Low.
+3. Set its **Leaderboard ID** to `com.ntkl.Nari.highscore`, or pick another and
+   change `GameCenterService.leaderboardID` to match.
+4. Sign in to Game Center on the test device (Settings → Game Center). The
+   simulator can sign in too, but a real device is the honest test.
+
+Until step 3 lands, the popup says the board is not live yet rather than showing
+an empty table: `loadLeaderboard` returns `.notConfigured` when Game Center has
+no leaderboard under that ID, and `.loadFailed` when the fetch itself breaks, so
+the three empty-looking outcomes stay distinguishable. Both are logged under the
+`com.ntkl.Nari` subsystem, category `GameCenter`:
+
+```bash
+xcrun simctl spawn booted log stream --predicate 'subsystem == "com.ntkl.Nari"'
+```
+
+The Game Center capability is already on the target: `Nari.entitlements` carries
+`com.apple.developer.game-center`, without which sign-in fails on device.
+
 ## To do
 
 - Real credits: replace the placeholder names in `StaticCreditsRepository`.
@@ -220,7 +251,8 @@ redraws — an unseeded shape would boil.
 - Accessibility: adjustable reaction windows (`RunRules` already isolates them);
   a reduce-flashing toggle for the Freeze frame.
 - A skippable Training Stage teaching the five poses before the timed loop.
-- (Stretch) GameKit leaderboard as a second tab beside Score History.
+- Create the Game Center leaderboard in App Store Connect (see below) —
+  the code is done, the board stays empty until that record exists.
 
 ### About Foundation Models
 
@@ -237,9 +269,9 @@ language. That can be added without touching the detection code, because
 Only compiled in `DEBUG`. Useful for grabbing screenshots without tapping:
 
 ```bash
-xcrun simctl launch booted com.yuknari.Nari -debugPopup credits
-xcrun simctl launch booted com.yuknari.Nari -debugAutoStart
-xcrun simctl launch booted com.yuknari.Nari -debugPrintPose
+xcrun simctl launch booted com.ntkl.Nari -debugPopup credits
+xcrun simctl launch booted com.ntkl.Nari -debugAutoStart
+xcrun simctl launch booted com.ntkl.Nari -debugPrintPose
 ```
 
 `-debugPopup` accepts `settings`, `credits`, or `scores`. `-debugAutoStart` takes
