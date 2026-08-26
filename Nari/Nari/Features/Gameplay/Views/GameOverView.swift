@@ -3,7 +3,13 @@ import Photos
 import SwiftUI
 
 /// The end of a run: score on the left, a playback of the run on the right,
-/// and the ways to replay, share, or save it. Kept neutral on purpose — this
+/// and the ways to replay, share, or save it.
+///
+/// Plain taps, not `HandHoverButton`s. Hand control is for a player standing
+/// several metres back mid-dance; here they walk *up* to the iPad to hit
+/// Download, and on the way their wrists sweep across the buttons. Play Again
+/// would fire from the approach itself, throwing away the run and the
+/// recording they came over to save. Kept neutral on purpose — this
 /// is a session summary, not a win or lose screen.
 struct GameOverView: View {
     let score: Int
@@ -89,7 +95,7 @@ struct GameOverView: View {
     // MARK: - Close
 
     private func closeButton(_ metrics: GameOverMetrics) -> some View {
-        HandHoverButton(action: onMenu) {
+        Button(action: onMenu) {
             Image(systemName: "xmark")
                 .font(.system(size: metrics.closeDiameter * 0.38, weight: .bold))
                 .foregroundStyle(Theme.Palette.ink)
@@ -153,8 +159,9 @@ struct GameOverView: View {
     private func outlinedTitle(_ metrics: GameOverMetrics) -> some View {
         Text(strings[.gameOverYourScore])
             .font(Theme.Fonts.title(metrics.titleFont))
-            .foregroundStyle(Theme.Palette.indigo)
-            .outlined(color: .white)
+            .foregroundStyle(.white)
+            .shadow(color: Theme.Palette.ink.opacity(0.85), radius: 8, y: 5)
+            .shadow(color: Theme.Palette.ink.opacity(0.5), radius: 2, y: 2)
     }
 
     private func scoreBadge(_ metrics: GameOverMetrics) -> some View {
@@ -164,12 +171,11 @@ struct GameOverView: View {
             .font(Theme.Fonts.label(metrics.badgeFont))
             .tracking(0.5)
             .foregroundStyle(.white)
-            // The badge is the one panel whose width is written rather than
-            // drawn, so it is the one that has to be told it may wrap: a long
-            // language and a five-figure best score together are wider than a
-            // phone, and without this the paint runs off both edges.
-            .lineLimit(2)
-            .minimumScaleFactor(0.7)
+            // One line, shrinking to fit rather than wrapping: the paint
+            // behind it is a fixed brushstroke, and a second line simply
+            // grows out through the top and bottom of it.
+            .lineLimit(1)
+            .minimumScaleFactor(0.45)
             .multilineTextAlignment(.center)
             .padding(.horizontal, metrics.badgeHPadding)
             .padding(.vertical, metrics.badgeVPadding)
@@ -243,17 +249,19 @@ struct GameOverView: View {
 
     @ViewBuilder
     private func actionButtons(_ metrics: GameOverMetrics) -> some View {
-        HandHoverButton(action: onRetry) {
+        // Play Again is the one thing most players came to this screen for,
+        // so it is the one pill that is not the same orange as its neighbours.
+        Button(action: onRetry) {
             actionLabel(strings[.gameOverRetry], symbol: "arrow.counterclockwise", metrics)
         }
-        .buttonStyle(pillStyle(metrics))
+        .buttonStyle(pillStyle(metrics, fill: Theme.Palette.indigo))
 
-        HandHoverButton(action: { isSharePresented = true }) {
+        Button(action: { isSharePresented = true }) {
             actionLabel(strings[.gameOverShare], symbol: "square.and.arrow.up", metrics)
         }
         .buttonStyle(pillStyle(metrics))
 
-        HandHoverButton(action: saveRecording) {
+        Button(action: saveRecording) {
             actionLabel(strings[.gameOverDownload], symbol: "arrow.down.to.line", metrics)
         }
         .buttonStyle(pillStyle(metrics))
@@ -267,9 +275,9 @@ struct GameOverView: View {
             .frame(maxWidth: metrics.isStacked ? .infinity : nil)
     }
 
-    private func pillStyle(_ metrics: GameOverMetrics) -> PaintedButtonStyle {
+    private func pillStyle(_ metrics: GameOverMetrics, fill: Color = Theme.Palette.cueOrange) -> PaintedButtonStyle {
         PaintedButtonStyle(
-            fill: Theme.Palette.cueOrange,
+            fill: fill,
             textColor: .white,
             borderColor: .white,
             height: metrics.buttonHeight,
@@ -412,7 +420,7 @@ struct GameOverMetrics {
         scoreFont = 56 * scale
         titleFont = 42 * scale
         titleOffset = 28 * scale
-        badgeFont = 36 * scale
+        badgeFont = 27 * scale
         badgeHPadding = 36 * scale
         badgeVPadding = 22 * scale
         videoWidth = 320 * scale
@@ -428,7 +436,8 @@ struct GameOverMetrics {
 
 /// A plain `UIActivityViewController` wrapper, standing in for `ShareLink`
 /// here because `ShareLink` has no way to be opened programmatically — and a
-/// `HandHoverButton` needs to open it from a completed hover, not only a tap.
+/// The share sheet is opened from a plain tap, so it needs presenting rather
+/// than a `ShareLink`.
 private struct ActivityShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 

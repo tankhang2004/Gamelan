@@ -24,18 +24,23 @@ struct LeyakView: View {
     var body: some View {
         GeometryReader { proxy in
             let height = proxy.size.height * Self.heightFraction
-            let faceY = proxy.size.height * progress
+            // Starts exactly where the old face-anchored placement put it —
+            // the face already in frame, hair trailing off the top — but
+            // travels all the way until the whole image, hair included, has
+            // cleared the bottom edge, rather than stopping the moment the
+            // face alone gets there and cutting to the next phase with the
+            // Leyak still hanging half on screen.
+            let startCenterY = -height * (Self.faceAnchor - 0.5)
+            let endCenterY = proxy.size.height + height / 2
+            let centerY = startCenterY + (endCenterY - startCenterY) * progress
             let x = mapper.point(CGPoint(x: column, y: 0.5)).x
 
             Image("leak")
                 .resizable()
                 .scaledToFit()
                 .frame(height: height)
-                // Positioned by where the face lands rather than by the image
-                // centre, so "the face is at the top edge" is true at progress
-                // 0 however tall the artwork is drawn.
-                .position(x: x, y: faceY - height * (Self.faceAnchor - 0.5))
-                .shadow(color: Theme.Palette.ink.opacity(0.5), radius: 30)
+                .position(x: x, y: centerY)
+                .drawingGroup()
         }
         .allowsHitTesting(false)
         .transition(.opacity)

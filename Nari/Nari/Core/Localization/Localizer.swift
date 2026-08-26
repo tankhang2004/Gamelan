@@ -33,13 +33,14 @@ struct Localizer: Equatable, Sendable {
         .greenRoomTrack: "Ginanti",
         .greenRoomArtist: "oleh Mekar Bhuana",
 
-        .cueWalk: "NGAYOG",
-        .cueSquat: "NGE'ED!",
-        .cueFreeze: "DIAM!",
-        .cueHold: "TAHAN",
+        .cueWalk: "JALAN DI TEMPAT!",
+        .cueSquat: "JONGKOK! Turun dan tahan",
+        .cueFreeze: "AGEM! Pasang pose dengan benar lalu tahan",
+        .cueHold: "TAHAN!",
         .cueNgayog: "Ngayog",
-        .cueNgeed: "Nge'ed",
-        .cueLeyak: "MINGGIR!",
+        .cueNgeed: "Jongkok",
+        .cueLeyak: "AWAS LEYAK! Kena sekali, tamat",
+        .cueCollectHint: "Petik bunga jepun untuk poin tambahan",
 
         .flashNice: "MANTAP!",
         .flashMissed: "LEWAT",
@@ -85,7 +86,7 @@ struct Localizer: Equatable, Sendable {
         .creditsHowToPlayStep1: "1. NGAYOG, NGAYOG, NGAYOG! Tapi lakukan perlahan, seperti penari.",
         .creditsHowToPlayStep2: "2. Perhatikan sisi kanan layar untuk referensi!",
         .creditsHowToPlayStep3: "3. Kumpulkan BUNGA JEPUN saat berjalan untuk poin tambahan!",
-        .creditsHowToPlayStep4: "4. Saat permainan memberi peringatan, NGE'ED dan tahan posisimu untuk menghindari Leyak yang terbang, tapi jangan. berhenti. berjalan!",
+        .creditsHowToPlayStep4: "4. Saat permainan memberi peringatan, NGE'ED (JONGKOK) dan tahan posisimu untuk menghindari Leyak yang terbang, tapi jangan. berhenti. berjalan!",
         .creditsHowToPlayStep5: "5. Bersiaplah melakukan pose AGEM kapan saja! Begitu kamu melakukannya, DIAM di tempat!",
 
         .creditsCreditsTitle: "Kredit",
@@ -111,7 +112,7 @@ struct Localizer: Equatable, Sendable {
 
         .cameraFieldWide: "Lebar",
         .cameraFieldStandard: "Normal",
-        .cameraFieldHint: "Tidak muat? Pakai Lebar.",
+        .cameraFieldHint: "Mau lebih menantang? Coba kamera 0.5x",
 
         .calibrationTitle: "KALIBRASI",
         .calibrationInstruction: "Kalibrasi...",
@@ -145,13 +146,14 @@ struct Localizer: Equatable, Sendable {
         .greenRoomTrack: "Ginanti",
         .greenRoomArtist: "by Mekar Bhuana",
 
-        .cueWalk: "WALK",
-        .cueSquat: "SQUAT!",
-        .cueFreeze: "FREEZE!",
-        .cueHold: "HOLD",
+        .cueWalk: "MARCH IN PLACE!",
+        .cueSquat: "SQUAT! Get down and hold it",
+        .cueFreeze: "AGEM! Do the pose correctly and hold it",
+        .cueHold: "HOLD!",
         .cueNgayog: "Ngayog",
-        .cueNgeed: "Nge'ed",
-        .cueLeyak: "MOVE!",
+        .cueNgeed: "SQUAD",
+        .cueLeyak: "BEWARE THE LEYAK! One touch ends the run",
+        .cueCollectHint: "Catch the frangipanis for extra points",
 
         .flashNice: "NICE!",
         .flashMissed: "MISSED",
@@ -223,7 +225,7 @@ struct Localizer: Equatable, Sendable {
 
         .cameraFieldWide: "Wide",
         .cameraFieldStandard: "Normal",
-        .cameraFieldHint: "Not fitting? Try Wide.",
+        .cameraFieldHint: "Need more challenge? Try 0.5x camera",
 
         .calibrationTitle: "CALIBRATION",
         .calibrationInstruction: "Calibrating...",

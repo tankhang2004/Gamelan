@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import OSLog
 import ReplayKit
@@ -12,6 +13,11 @@ import ReplayKit
 final class SessionRecorder {
     private let recorder = RPScreenRecorder.shared()
     private var isRecording = false
+    /// When capture actually began, and when the part worth keeping began.
+    /// They differ because consent has to be asked for while the player is
+    /// still at the iPad, which is several phases before the run starts.
+    private var captureStartedAt: Date?
+    private var contentStartedAt: Date?
 
     /// False on the simulator and on any device that has recording disabled
     /// (Screen Time restrictions, MDM), so the game over screen can fall back
@@ -26,6 +32,8 @@ final class SessionRecorder {
     func start() {
         guard recorder.isAvailable, !isRecording else { return }
         isRecording = true
+        captureStartedAt = .now
+        contentStartedAt = nil
         recorder.isMicrophoneEnabled = false
         recorder.startRecording { [weak self] error in
             guard let error else { return }
@@ -34,11 +42,27 @@ final class SessionRecorder {
         }
     }
 
+    /// Marks the point the saved clip should begin at.
+    ///
+    /// Capture has to start early — ReplayKit puts its consent alert wherever
+    /// `start()` is called, and the only moment the player is within reach of
+    /// the iPad is before they walk back to their mark. So everything from
+    /// there to the first scored frame is recorded and then cut off here,
+    /// rather than handing the player a clip that opens on a minute of them
+    /// shuffling into frame.
+    func markContentStart() {
+        guard isRecording, contentStartedAt == nil else { return }
+        contentStartedAt = .now
+    }
+
     /// Stops the run's recording and returns where the clip landed, or nil if
     /// nothing was recording or the write failed.
     func stop() async -> URL? {
         guard isRecording else { return nil }
         isRecording = false
+        let leadIn = leadInSeconds
+        captureStartedAt = nil
+        contentStartedAt = nil
 
         // A fresh name every time, so a leftover file from a failed previous
         // write can never collide with this one.
@@ -46,7 +70,7 @@ final class SessionRecorder {
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("mp4")
 
-        return await withCheckedContinuation { continuation in
+        let raw: URL? = await withCheckedContinuation { continuation in
             recorder.stopRecording(withOutput: url) { error in
                 if let error {
                     Logger.recording.error("Could not save recording: \(error.localizedDescription)")
@@ -56,6 +80,48 @@ final class SessionRecorder {
                 }
             }
         }
+
+        guard let raw else { return nil }
+        guard let leadIn, leadIn > 0.5 else { return raw }
+        // Keeping the untrimmed clip on failure is deliberate: a slightly long
+        // video is a far better outcome than no video at all.
+        return await Self.trimmingLeadIn(leadIn, from: raw) ?? raw
+    }
+
+    /// How much of the capture happened before the run itself started.
+    private var leadInSeconds: Double? {
+        guard let captureStartedAt, let contentStartedAt else { return nil }
+        return contentStartedAt.timeIntervalSince(captureStartedAt)
+    }
+
+    /// Re-exports the clip without its first `leadIn` seconds.
+    private static func trimmingLeadIn(_ leadIn: Double, from source: URL) async -> URL? {
+        let asset = AVURLAsset(url: source)
+        guard let duration = try? await asset.load(.duration) else { return nil }
+
+        let start = CMTime(seconds: leadIn, preferredTimescale: 600)
+        guard start < duration else { return nil }
+
+        guard let export = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
+            return nil
+        }
+
+        let trimmed = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("mp4")
+
+        export.outputURL = trimmed
+        export.outputFileType = .mp4
+        export.timeRange = CMTimeRange(start: start, end: duration)
+
+        await export.export()
+        guard export.status == .completed else {
+            Logger.recording.error("Could not trim recording: \(export.error?.localizedDescription ?? "unknown")")
+            return nil
+        }
+
+        try? FileManager.default.removeItem(at: source)
+        return trimmed
     }
 
     /// Discards whatever is mid-recording without keeping a file — the
@@ -64,6 +130,8 @@ final class SessionRecorder {
     func cancel() {
         guard isRecording else { return }
         isRecording = false
+        captureStartedAt = nil
+        contentStartedAt = nil
         recorder.stopRecording { _, _ in }
     }
 
@@ -74,6 +142,8 @@ final class SessionRecorder {
     func restart() async {
         if isRecording {
             isRecording = false
+            captureStartedAt = nil
+            contentStartedAt = nil
             await withCheckedContinuation { continuation in
                 recorder.stopRecording { _, _ in continuation.resume() }
             }

@@ -41,14 +41,6 @@ struct TaksuMeterView: View {
                     .offset(x: -width * Self.fillNudge)
                     .animation(Theme.Motion.meter, value: fraction)
 
-                VStack {
-                    Spacer(minLength: 0)
-                    Text("\(Int(clamped * 100))%")
-                        .font(Theme.Fonts.readout(width * 0.42))
-                        .foregroundStyle(.white)
-                        .outlined(color: Theme.Palette.ink, width: 1.5)
-                        .padding(.bottom, width * 0.22)
-                }
             }
             // The whole meter brightens together, so a change reads as the bar
             // reacting rather than as one layer flickering inside it.
@@ -68,6 +60,31 @@ struct TaksuMeterView: View {
                     .opacity(isLow && pulse ? 0.55 : 0)
                     .allowsHitTesting(false)
             )
+            // The Taksu star caps the bar, so the meter says what it is
+            // measuring without a written label taking room beside it.
+            // Outside the opacity above, so it stays legible while the bar
+            // itself is faded back.
+            // Under the bar rather than printed across the fill: over the
+            // fill it was a number sitting on a moving colour, and the two
+            // were competing for the same few points of width.
+            .overlay(alignment: .bottom) {
+                Text("\(Int(clamped * 100))%")
+                    .font(Theme.Fonts.readout(width * 0.44))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .shadow(color: Theme.Palette.ink, radius: width * 0.08, y: width * 0.04)
+                    .fixedSize()
+                    .offset(y: width * 0.85)
+            }
+            .overlay(alignment: .top) {
+                Image("taksu")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: width * 1.6)
+                    .offset(y: -width * 0.95)
+                    .shadow(color: Theme.Palette.ink.opacity(0.45), radius: width * 0.12, y: width * 0.06)
+            }
         }
         .onAppear { pulse = true }
         .animation(

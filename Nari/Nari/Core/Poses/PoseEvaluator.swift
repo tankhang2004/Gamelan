@@ -18,8 +18,20 @@ struct PoseEvaluation: Sendable {
     /// False when a tracked point could not be seen at all this frame.
     let hasAllPoints: Bool
 
+    /// How many of the nine tracked points landed where the pose wants them.
+    var correctCount: Int { markers.filter(\.isCorrect).count }
+
+    /// How many have to land for the pose to count.
+    ///
+    /// Eight of nine, not nine of nine. Demanding every point meant one
+    /// stubborn wrist could hold a child in an otherwise perfect agem until
+    /// the window ran out — the pose was right, the tracker simply disagreed
+    /// about a finger's width. One point of slack is the difference between
+    /// "hold still and it will catch" and "hold still and hope".
+    static let requiredCorrectPoints = 8
+
     var isCorrect: Bool {
-        hasAllPoints && !markers.isEmpty && markers.allSatisfy(\.isCorrect)
+        hasAllPoints && !markers.isEmpty && correctCount >= Self.requiredCorrectPoints
     }
 
     static let none = PoseEvaluation(markers: [], hasAllPoints: false)

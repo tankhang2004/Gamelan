@@ -25,53 +25,32 @@ struct PaintSwatchReadout: View {
 /// The card on the right showing which move is being asked for, with the pose
 /// silhouette above its name. Printed on torn paper like the Taksu meter.
 struct PoseCueCard: View {
-    let title: String
     let artworkName: String?
     let symbolName: String
-    /// How much of the painted backing is left. Kept low so the card reads as
-    /// a reference held up over the room rather than a panel bolted across it
-    /// — the player has to see themselves through the corner it occupies.
-    var backingOpacity: Double = 0.22
 
     var body: some View {
-        VStack(spacing: 10) {
-            Spacer(minLength: 0)
-
-            Group {
-                if let artworkName, UIImage(named: artworkName) != nil {
-                    Image(artworkName)
-                        .resizable()
-                        .scaledToFit()
-                } else {
-                    Image(systemName: symbolName)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(20)
-                }
+        Group {
+            if let artworkName, UIImage(named: artworkName) != nil {
+                Image(artworkName)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(systemName: symbolName)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(12)
+                    .foregroundStyle(Theme.Palette.ink)
             }
-            .foregroundStyle(Theme.Palette.ink)
-
-            Text(title)
-                .font(Theme.Fonts.label(26))
-                .foregroundStyle(Theme.Palette.ink)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-
-            Spacer(minLength: 0)
         }
-        // The dancer and her name keep their own shadow now that there is no
-        // solid card behind them: ink on a bright camera frame is otherwise
-        // only as readable as whatever happens to be in shot.
-        .shadow(color: Theme.Palette.paper.opacity(0.9), radius: 3)
-        .padding(.horizontal, 26)
-        .padding(.vertical, 30)
+        // One padding for every pose, so the drawings all sit the same size
+        // inside the same banner rather than each finding its own scale.
+        .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            Image("banner-yellow")
-                .resizable()
-                .scaledToFill()
-                .opacity(backingOpacity)
-        )
+//        .background(
+//            Image("banner-yellow")
+//                .resizable()
+//                .scaledToFill()
+//        )
     }
 }
 
@@ -87,14 +66,21 @@ struct PoseCueCard: View {
 /// to fit.
 struct CuePromptView: View {
     let text: String
-    let progress: Double
-    let tint: Color
+    /// Which of the five hand-painted splashes this instruction sits on —
+    /// one colour per move, so the banner itself says what kind of cue this
+    /// is before the player has even read the word.
+    let backgroundAsset: String
+    /// 0...1 fill for the hold countdown under the instruction. Nil hides the
+    /// bar entirely — it only ever appears while a squat or an agem is being
+    /// held, counting the same window the border round the stage is already
+    /// draining, so the two never disagree about how much time is left.
+    var holdProgress: Double? = nil
     /// The widest the swatch may print. Left at the width it was drawn for,
     /// so anywhere with room to spare looks exactly as it always has.
     var maxWidth: CGFloat = CuePromptView.designWidth
 
     /// The bar plus the swatch's own margins, which is what this was drawn as.
-    static let designWidth: CGFloat = 400
+    static let designWidth: CGFloat = 620
     private static let margin: CGFloat = 40
 
     /// Room left for the word and the bar under it.
@@ -103,38 +89,52 @@ struct CuePromptView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
+            // A cue names its move and then says what to do with it, so it is
+            // a short sentence rather than a single word — two lines at most,
+            // shrinking rather than pushing the block out past its slot. Sized
+            // to be read from across the room, not off a phone held in hand.
             Text(text)
-                .font(Theme.Fonts.title(46))
-                .foregroundStyle(Theme.Palette.cream)
-                .tracking(3)
-                // A cue is one word and reads as one: a long one in a narrow
-                // stage shrinks rather than wrapping, and shrinks rather than
-                // pushing the swatch out past the room it was given.
-                .lineLimit(1)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
                 .minimumScaleFactor(0.5)
-                .shadow(color: Theme.Palette.ink, radius: 0, x: 3, y: 3)
+                .commandBannerText(size: 50)
 
-            if progress > 0 {
-                Capsule()
-                    .fill(Theme.Palette.ink.opacity(0.25))
-                    .frame(height: 12)
-                    .overlay(alignment: .leading) {
-                        GeometryReader { proxy in
-                            Capsule()
-                                .fill(tint)
-                                .frame(width: proxy.size.width * max(0, min(1, 1 - progress)))
-                        }
-                    }
-                    .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: 3))
+            if let holdProgress {
+                HoldCountdownBar(progress: holdProgress)
+                    .frame(height: 16)
             }
         }
-        // Written once here rather than on the bar, where it used to be a flat
-        // 320 that the word above it was free to overhang.
-        .frame(width: contentWidth)
-        .padding(.horizontal, Self.margin)
-        .padding(.vertical, 16)
-        .background(BrushSwatchShape(seed: 11, roughness: 0.09).fill(tint.opacity(0.92)))
+        .padding(.horizontal, 30)
+        .padding(.vertical, 18)
+        .frame(maxWidth: contentWidth)
+        .background(
+            Image(backgroundAsset)
+                .resizable()
+                .scaledToFill()
+        )
+        .shadow(color: Theme.Palette.ink.opacity(0.28), radius: 0, x: 2, y: 4)
+    }
+}
+
+/// The countdown for an actual hold: black creeping across a white track as
+/// the pose is held, filling exactly as the ring round the stage drains —
+/// two readings of the same number, one for a glance up close and one for
+/// across the room.
+struct HoldCountdownBar: View {
+    /// 0 the instant the hold locks in, 1 once it has been held in full.
+    let progress: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white)
+                Capsule()
+                    .fill(Theme.Palette.ink)
+                    .frame(width: proxy.size.width * CGFloat(progress).clamped(to: 0...1))
+            }
+        }
+        .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: 2))
     }
 }
 
@@ -142,8 +142,9 @@ struct CuePromptView: View {
     VStack(spacing: 30) {
         PaintSwatchReadout(text: "1342")
         PaintSwatchReadout(text: "01:45")
-        CuePromptView(text: "SQUAT!", progress: 0.4, tint: Theme.Palette.cueOrange)
-        PoseCueCard(title: "Agem Kanan", artworkName: nil, symbolName: "figure.stand")
+        CuePromptView(text: "SQUAT!", backgroundAsset: "command-orange-squat-hold")
+        CuePromptView(text: "HOLD IT!", backgroundAsset: "command-orange-squat-hold", holdProgress: 0.6)
+        PoseCueCard(artworkName: nil, symbolName: "figure.stand")
             .frame(width: 220, height: 320)
     }
     .padding(40)

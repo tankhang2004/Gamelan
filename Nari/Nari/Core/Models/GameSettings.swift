@@ -16,7 +16,7 @@ struct GameSettings: Codable, Equatable, Sendable {
         musicVolume: 0.5,
         sfxVolume: 0.8,
         language: .default,
-        cameraFieldOfView: .wide
+        cameraFieldOfView: .standard
     )
 
     /// Decoded field by field so that adding a setting cannot throw away

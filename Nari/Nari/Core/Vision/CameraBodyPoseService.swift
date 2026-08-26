@@ -38,7 +38,7 @@ final class CameraBodyPoseService: NSObject, BodyPoseSource, @unchecked Sendable
 
     /// The device, kept so the field of view can be changed while running.
     private var camera: AVCaptureDevice?
-    private var fieldOfView: CameraFieldOfView = .wide
+    private var fieldOfView: CameraFieldOfView = .standard
     /// Zoom that crops the widest format down to `standardDegrees`. 1 when the
     /// device has nothing wider to crop, which is what makes the toggle hide
     /// itself rather than pretend.

@@ -79,7 +79,7 @@ struct TutorialView: View {
                     ZStack {
                         ForEach(steps) { candidate in
                             Text(strings[candidate.captionKey])
-                                .font(Theme.Fonts.body(metrics.captionFont))
+                                .font(.system(size: metrics.captionFont, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white)
                                 .multilineTextAlignment(.center)
                                 .opacity(candidate == step ? 1 : 0)
@@ -93,7 +93,7 @@ struct TutorialView: View {
                         onStart()
                     }) {
                         Text(strings[.tutorialStart])
-                            .font(Theme.Fonts.label(metrics.buttonFont))
+                            .font(.system(size: metrics.buttonFont, weight: .bold, design: .rounded))
                             .tracking(metrics.buttonFont * 0.05)
                             .foregroundStyle(.white)
                             .padding(.horizontal, metrics.buttonHeight * 0.65)
@@ -106,8 +106,13 @@ struct TutorialView: View {
 
                     startingIndicator(metrics)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
-                .padding(.top, metrics.topPadding)
+                // Centred rather than pinned to the top: the stack is shorter
+                // than the stage on every device, and hanging it from the top
+                // left it sitting high with all the slack underneath. Nudged
+                // a little below true centre so the back arrow in the corner
+                // is not crowding the video.
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
+                .offset(y: proxy.size.height * 0.04)
             }
 
             VStack {
@@ -171,7 +176,6 @@ struct TutorialView: View {
 /// nothing by furniture that stayed full size.
 struct TutorialMetrics {
     let spacing: CGFloat
-    let topPadding: CGFloat
     let videoMaxWidth: CGFloat
     let videoMaxHeight: CGFloat
     let videoCorner: CGFloat
@@ -190,7 +194,6 @@ struct TutorialMetrics {
         let scale = (height / 834).clamped(to: 0.42...1)
 
         spacing = 18 * scale
-        topPadding = 50 * scale
         videoMaxWidth = min(1000, max(size.width - 48, 1))
         // The video takes what is left once the rest has had its share, so it
         // is the part that gives way on a short screen — never the button.

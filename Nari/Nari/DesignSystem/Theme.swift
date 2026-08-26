@@ -79,30 +79,36 @@ enum Theme {
 
     // MARK: - Type
 
-    /// Display type is Henny Penny and button type is Instrument Serif, matching
-    /// the Figma. Neither ships with iOS, so each style falls back to the nearest
-    /// system design when the font file is not in the bundle — see the README for
-    /// how to drop the real files in.
+    /// Two faces, and only two.
+    ///
+    /// Henny Penny is the game's voice and is reserved for titles — it is a
+    /// display face and stops being readable the moment it is asked to carry a
+    /// sentence. Everything else is SF Pro Rounded, which keeps the soft,
+    /// hand-drawn feel at any size, and the hierarchy is carried by weight
+    /// rather than by introducing a third family.
     enum Fonts {
         private static let display = "HennyPenny-Regular"
-        private static let serif = "InstrumentSerif-Regular"
 
+        /// Screen and section titles. Falls back to a heavy serif if the
+        /// bundled face is missing — see the README for dropping it in.
         static func title(_ size: CGFloat) -> Font {
-            custom(display, size: size) ?? .system(size: size, weight: .heavy, design: .serif)
+            custom(display, size: size) ?? .system(size: size, weight: .heavy, design: .rounded)
         }
 
+        /// Buttons, list rows, anything naming a thing.
         static func label(_ size: CGFloat) -> Font {
-            custom(serif, size: size) ?? .system(size: size, weight: .semibold, design: .serif)
+            .system(size: size, weight: .semibold, design: .rounded)
         }
 
+        /// Running prose.
         static func body(_ size: CGFloat) -> Font {
-            custom(serif, size: size) ?? .system(size: size, weight: .regular, design: .serif)
+            .system(size: size, weight: .regular, design: .rounded)
         }
 
         /// Numbers on the HUD. Monospaced digits so a rising score does not make
         /// the swatch under it jitter.
         static func readout(_ size: CGFloat) -> Font {
-            .system(size: size, weight: .bold, design: .serif).monospacedDigit()
+            .system(size: size, weight: .heavy, design: .rounded).monospacedDigit()
         }
 
         private static func custom(_ name: String, size: CGFloat) -> Font? {
@@ -126,13 +132,57 @@ extension Color {
 }
 
 extension View {
-    /// A cheap text stroke: four hard shadows, one per side, since SwiftUI has
-    /// no native outline for `Text`.
-    func outlined(color: Color, width: CGFloat = 2) -> some View {
+    /// The house style for words printed over the live camera.
+    ///
+    /// Everything on the stage is fighting a moving photograph for contrast,
+    /// and a hard outline was losing: it thickened the letterforms until they
+    /// read as a sticker and still disappeared over a bright wall. A soft drop
+    /// shadow plus a dimmed block behind the line does the same job by putting
+    /// a known background under the text rather than by armouring the text
+    /// itself.
+    func stageCaption(
+        size: CGFloat,
+        color: Color = .white,
+        blockOpacity: Double = 0.42
+    ) -> some View {
         self
-            .shadow(color: color, radius: 0, x: width, y: 0)
-            .shadow(color: color, radius: 0, x: -width, y: 0)
-            .shadow(color: color, radius: 0, x: 0, y: width)
-            .shadow(color: color, radius: 0, x: 0, y: -width)
+            .font(.system(size: size, weight: .bold, design: .rounded))
+            .foregroundStyle(color)
+            .shadow(color: Theme.Palette.ink.opacity(0.75), radius: size * 0.10, y: size * 0.05)
+            .padding(.horizontal, size * 0.5)
+            .padding(.vertical, size * 0.22)
+            .background(
+                RoundedRectangle(cornerRadius: size * 0.35, style: .continuous)
+                    .fill(Theme.Palette.ink.opacity(blockOpacity))
+            )
+    }
+
+    /// The command banners' instruction text: a solid fill ringed by a hard
+    /// outline built from stacked zero-blur shadows in eight directions.
+    ///
+    /// These banners sit on a painted splash asset rather than live camera,
+    /// so — unlike `stageCaption` — the letters can be dense and solid
+    /// instead of fighting a moving picture: a fill dark enough to read on
+    /// any of the five splash colours, wrapped in a light outline so it never
+    /// dissolves into whichever paint tone is directly behind it. Sized big
+    /// on purpose — this is the one line of text a player standing several
+    /// metres back has to be able to read at a glance.
+    func commandBannerText(
+        size: CGFloat,
+        fill: Color = Theme.Palette.ink,
+        outline: Color = .white
+    ) -> some View {
+        let offset = size * 0.045
+        return self
+            .font(.system(size: size, weight: .heavy, design: .rounded))
+            .foregroundStyle(fill)
+            .shadow(color: outline, radius: 0, x: offset, y: 0)
+            .shadow(color: outline, radius: 0, x: -offset, y: 0)
+            .shadow(color: outline, radius: 0, x: 0, y: offset)
+            .shadow(color: outline, radius: 0, x: 0, y: -offset)
+            .shadow(color: outline, radius: 0, x: offset * 0.7, y: offset * 0.7)
+            .shadow(color: outline, radius: 0, x: -offset * 0.7, y: offset * 0.7)
+            .shadow(color: outline, radius: 0, x: offset * 0.7, y: -offset * 0.7)
+            .shadow(color: outline, radius: 0, x: -offset * 0.7, y: -offset * 0.7)
     }
 }
