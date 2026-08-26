@@ -46,7 +46,7 @@ struct TaksuMeterView: View {
                     Text("\(Int(clamped * 100))%")
                         .font(Theme.Fonts.readout(width * 0.42))
                         .foregroundStyle(.white)
-                        .outlined(color: Theme.Palette.ink, width: 1.5)
+                        .shadow(color: Theme.Palette.ink, radius: width * 0.06, y: width * 0.03)
                         .padding(.bottom, width * 0.22)
                 }
             }
@@ -68,6 +68,18 @@ struct TaksuMeterView: View {
                     .opacity(isLow && pulse ? 0.55 : 0)
                     .allowsHitTesting(false)
             )
+            // The Taksu star caps the bar, so the meter says what it is
+            // measuring without a written label taking room beside it.
+            // Outside the opacity above, so it stays legible while the bar
+            // itself is faded back.
+            .overlay(alignment: .top) {
+                Image("taksu")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: width * 1.6)
+                    .offset(y: -width * 0.95)
+                    .shadow(color: Theme.Palette.ink.opacity(0.45), radius: width * 0.12, y: width * 0.06)
+            }
         }
         .onAppear { pulse = true }
         .animation(

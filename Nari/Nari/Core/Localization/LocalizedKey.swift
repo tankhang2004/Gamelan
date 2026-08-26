@@ -64,6 +64,7 @@ enum LocalizedKey: String, CaseIterable, Sendable {
     case cueNgayog
     case cueNgeed
     case cueLeyak
+    case cueCollectHint
 
     // Event flashes
     case flashNice

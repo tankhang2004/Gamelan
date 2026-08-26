@@ -40,6 +40,7 @@ struct Localizer: Equatable, Sendable {
         .cueNgayog: "Ngayog",
         .cueNgeed: "Nge'ed",
         .cueLeyak: "MINGGIR!",
+        .cueCollectHint: "Petik bunga jepun untuk poin tambahan",
 
         .flashNice: "MANTAP!",
         .flashMissed: "LEWAT",
@@ -111,7 +112,7 @@ struct Localizer: Equatable, Sendable {
 
         .cameraFieldWide: "Lebar",
         .cameraFieldStandard: "Normal",
-        .cameraFieldHint: "Tidak muat? Pakai Lebar.",
+        .cameraFieldHint: "Kurang ruang? Pakai Lebar.",
 
         .calibrationTitle: "KALIBRASI",
         .calibrationInstruction: "Kalibrasi...",
@@ -152,6 +153,7 @@ struct Localizer: Equatable, Sendable {
         .cueNgayog: "Ngayog",
         .cueNgeed: "Nge'ed",
         .cueLeyak: "MOVE!",
+        .cueCollectHint: "Catch the frangipanis for extra points",
 
         .flashNice: "NICE!",
         .flashMissed: "MISSED",
@@ -223,7 +225,7 @@ struct Localizer: Equatable, Sendable {
 
         .cameraFieldWide: "Wide",
         .cameraFieldStandard: "Normal",
-        .cameraFieldHint: "Not fitting? Try Wide.",
+        .cameraFieldHint: "No space? Try Wide.",
 
         .calibrationTitle: "CALIBRATION",
         .calibrationInstruction: "Calibrating...",

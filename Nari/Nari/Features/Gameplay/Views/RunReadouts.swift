@@ -28,10 +28,10 @@ struct PoseCueCard: View {
     let title: String
     let artworkName: String?
     let symbolName: String
-    /// How much of the painted backing is left. Kept low so the card reads as
-    /// a reference held up over the room rather than a panel bolted across it
-    /// — the player has to see themselves through the corner it occupies.
-    var backingOpacity: Double = 0.22
+    /// How much of the painted backing is left. Solid by default: a card the
+    /// player can see the room through is a card they cannot read the pose
+    /// off, and the pose is the whole reason it is on screen.
+    var backingOpacity: Double = 1
 
     var body: some View {
         VStack(spacing: 10) {
@@ -52,17 +52,13 @@ struct PoseCueCard: View {
             .foregroundStyle(Theme.Palette.ink)
 
             Text(title)
-                .font(Theme.Fonts.label(26))
+                .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.Palette.ink)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
 
             Spacer(minLength: 0)
         }
-        // The dancer and her name keep their own shadow now that there is no
-        // solid card behind them: ink on a bright camera frame is otherwise
-        // only as readable as whatever happens to be in shot.
-        .shadow(color: Theme.Palette.paper.opacity(0.9), radius: 3)
         .padding(.horizontal, 26)
         .padding(.vertical, 30)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -87,8 +83,6 @@ struct PoseCueCard: View {
 /// to fit.
 struct CuePromptView: View {
     let text: String
-    let progress: Double
-    let tint: Color
     /// The widest the swatch may print. Left at the width it was drawn for,
     /// so anywhere with room to spare looks exactly as it always has.
     var maxWidth: CGFloat = CuePromptView.designWidth
@@ -103,38 +97,19 @@ struct CuePromptView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text(text)
-                .font(Theme.Fonts.title(46))
-                .foregroundStyle(Theme.Palette.cream)
-                .tracking(3)
-                // A cue is one word and reads as one: a long one in a narrow
-                // stage shrinks rather than wrapping, and shrinks rather than
-                // pushing the swatch out past the room it was given.
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .shadow(color: Theme.Palette.ink, radius: 0, x: 3, y: 3)
-
-            if progress > 0 {
-                Capsule()
-                    .fill(Theme.Palette.ink.opacity(0.25))
-                    .frame(height: 12)
-                    .overlay(alignment: .leading) {
-                        GeometryReader { proxy in
-                            Capsule()
-                                .fill(tint)
-                                .frame(width: proxy.size.width * max(0, min(1, 1 - progress)))
-                        }
-                    }
-                    .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: 3))
-            }
-        }
-        // Written once here rather than on the bar, where it used to be a flat
-        // 320 that the word above it was free to overhang.
-        .frame(width: contentWidth)
-        .padding(.horizontal, Self.margin)
-        .padding(.vertical, 16)
-        .background(BrushSwatchShape(seed: 11, roughness: 0.09).fill(tint.opacity(0.92)))
+        // No draining bar under the word any more: the cue window is shown by
+        // the border closing round the whole stage, the same way calibration
+        // shows its hold, so there is one language for "time is running" on
+        // this screen rather than two.
+        Text(text)
+            .tracking(3)
+            // A cue is one word and reads as one: a long one in a narrow stage
+            // shrinks rather than wrapping, and shrinks rather than pushing the
+            // swatch out past the room it was given.
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .stageCaption(size: 46, blockOpacity: 0.55)
+            .frame(maxWidth: contentWidth)
     }
 }
 
@@ -142,7 +117,7 @@ struct CuePromptView: View {
     VStack(spacing: 30) {
         PaintSwatchReadout(text: "1342")
         PaintSwatchReadout(text: "01:45")
-        CuePromptView(text: "SQUAT!", progress: 0.4, tint: Theme.Palette.cueOrange)
+        CuePromptView(text: "SQUAT!")
         PoseCueCard(title: "Agem Kanan", artworkName: nil, symbolName: "figure.stand")
             .frame(width: 220, height: 320)
     }

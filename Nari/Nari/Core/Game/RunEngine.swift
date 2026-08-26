@@ -298,7 +298,11 @@ final class RunEngine {
         input: RunInput,
         events: inout [RunEvent]
     ) {
-        if input.matchesCuedPose {
+        // Read time first: the cue has to be on screen long enough to be read
+        // before striking the pose counts, or a player who happened to already
+        // be standing in it never sees what they were asked for.
+        let shown = rules.freezeGracePeriod - remaining
+        if shown >= rules.freezeReadSeconds, input.matchesCuedPose {
             holdTotal = Double.random(in: rules.freezeHoldDuration, using: &generator)
             phase = .freezeHold(side: side, elapsed: 0)
             events.append(.freezeLocked)

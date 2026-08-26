@@ -39,7 +39,8 @@ struct RunRules: Sendable {
     var squatGracePeriod: Double = 4
     var squatHitEnergy: Double = 5
     var squatHitScore: Int = 5
-    var squatMissEnergy: Double = -8
+    /// What the "TOO SLOW" banner charges for never getting down at all.
+    var squatMissEnergy: Double = -15
 
     /// Seconds the squat has to be held once it locks in, while the wave passes
     /// overhead.
@@ -53,13 +54,21 @@ struct RunRules: Sendable {
     /// two have to agree.
     var squatHoldScore: Int = 5
     var squatHoldEnergy: Double = 5
-    /// Standing up into the wave. Costs the same as never squatting at all.
-    var squatBreakEnergy: Double = -8
+    /// Standing up into the wave, as the "BAD SQUAT" banner charges it.
+    /// Cheaper than never squatting: getting down and losing it is closer to
+    /// the move than not trying.
+    var squatBreakEnergy: Double = -10
 
     // MARK: - Agem (freeze interrupt)
 
     /// Time to get all nine points into the pose before the cue is lost.
     var freezeGracePeriod: Double = 10
+    /// How long the cue is on screen before the pose is allowed to lock in.
+    ///
+    /// Without this a player already standing in something close to the agem
+    /// locks the instant the cue appears, and the hold is counting down before
+    /// they have read what was asked for. The cue needs a beat to be a cue.
+    var freezeReadSeconds: Double = 2
     /// Time the pose has to be held once it locks in. A range for the same
     /// reason as `squatHoldDuration`.
     var freezeHoldDuration: ClosedRange<Double> = 5...5
@@ -93,7 +102,7 @@ struct RunRules: Sendable {
     /// Long enough to see it, read where it is falling, and walk out of the
     /// way — this is the one move in the game that cannot be survived by
     /// standing still, so the window has to be generous.
-    var leyakDiveSeconds: Double = 3.4
+    var leyakDiveSeconds: Double = 2.2
     /// Half the width of the killing column, in frame widths. Narrower than
     /// the artwork, which is mostly hair: only the face actually strikes.
     var leyakColumnHalfWidth: CGFloat = 0.085

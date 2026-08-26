@@ -126,13 +126,28 @@ extension Color {
 }
 
 extension View {
-    /// A cheap text stroke: four hard shadows, one per side, since SwiftUI has
-    /// no native outline for `Text`.
-    func outlined(color: Color, width: CGFloat = 2) -> some View {
+    /// The house style for words printed over the live camera.
+    ///
+    /// Everything on the stage is fighting a moving photograph for contrast,
+    /// and a hard outline was losing: it thickened the letterforms until they
+    /// read as a sticker and still disappeared over a bright wall. A soft drop
+    /// shadow plus a dimmed block behind the line does the same job by putting
+    /// a known background under the text rather than by armouring the text
+    /// itself.
+    func stageCaption(
+        size: CGFloat,
+        color: Color = .white,
+        blockOpacity: Double = 0.42
+    ) -> some View {
         self
-            .shadow(color: color, radius: 0, x: width, y: 0)
-            .shadow(color: color, radius: 0, x: -width, y: 0)
-            .shadow(color: color, radius: 0, x: 0, y: width)
-            .shadow(color: color, radius: 0, x: 0, y: -width)
+            .font(.system(size: size, weight: .bold, design: .rounded))
+            .foregroundStyle(color)
+            .shadow(color: Theme.Palette.ink.opacity(0.75), radius: size * 0.10, y: size * 0.05)
+            .padding(.horizontal, size * 0.5)
+            .padding(.vertical, size * 0.22)
+            .background(
+                RoundedRectangle(cornerRadius: size * 0.35, style: .continuous)
+                    .fill(Theme.Palette.ink.opacity(blockOpacity))
+            )
     }
 }

@@ -75,9 +75,10 @@ struct GameplayView: View {
                             coins
                         }
 
+                        cueTimerBorder
                         phaseOverlay
                         eventFlash
-                        greatBanner
+                        actionBanner
                     }
                     .environment(\.handScreenPositions, handScreenPositions(in: proxy))
                 }
@@ -358,19 +359,28 @@ struct GameplayView: View {
         return Group {
             switch run.phase {
             case .ngayog:
-                CuePromptView(text: strings[.cueWalk], progress: 0, tint: Theme.Palette.indigo, maxWidth: width)
+                VStack(spacing: 10) {
+                    CuePromptView(text: strings[.cueWalk], maxWidth: width)
+                    // The march scores nothing on its own, so without this the
+                    // resting state of the game reads as "do this for points"
+                    // when the points are actually lying on the floor.
+                    Text(strings[.cueCollectHint])
+                        .multilineTextAlignment(.center)
+                        .stageCaption(size: 20, blockOpacity: 0.5)
+                        .frame(maxWidth: width)
+                }
             case .squatCue:
-                CuePromptView(text: strings[.cueSquat], progress: run.phaseProgress, tint: Theme.Palette.cueOrange, maxWidth: width)
+                CuePromptView(text: strings[.cueSquat], maxWidth: width)
             case .squatHold:
-                CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect, maxWidth: width)
+                CuePromptView(text: strings[.cueHold], maxWidth: width)
             case .freezeGrace:
-                CuePromptView(text: strings[.cueFreeze], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink, maxWidth: width)
+                CuePromptView(text: strings[.cueFreeze], maxWidth: width)
             case .freezeHold:
-                CuePromptView(text: strings[.cueHold], progress: 1 - run.phaseProgress, tint: Theme.Palette.poseCorrect, maxWidth: width)
+                CuePromptView(text: strings[.cueHold], maxWidth: width)
             // The warning carries the same instruction as the dive, and is the
             // half of it the player can still act on.
             case .leyakWarning, .leyakDive:
-                CuePromptView(text: strings[.cueLeyak], progress: run.phaseProgress, tint: Theme.Palette.gameOverPink, maxWidth: width)
+                CuePromptView(text: strings[.cueLeyak], maxWidth: width)
             case .gameOver:
                 EmptyView()
             }
@@ -421,10 +431,8 @@ struct GameplayView: View {
 
                 VStack {
                     Text(calibrationMessage)
-                        .font(.system(size: 56, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .outlined(color: Theme.Palette.ink)
                         .multilineTextAlignment(.center)
+                        .stageCaption(size: 46)
                         .padding(.horizontal, 48)
                     Spacer()
                 }
@@ -507,8 +515,9 @@ struct GameplayView: View {
     private var startingBanner: some View {
         Text(strings[.startingTitle])
             .font(Theme.Fonts.title(56))
-            .foregroundStyle(Theme.Palette.indigo)
-            .outlined(color: .white)
+            .foregroundStyle(.white)
+            .shadow(color: Theme.Palette.ink.opacity(0.85), radius: 8, y: 5)
+            .shadow(color: Theme.Palette.ink.opacity(0.55), radius: 2, y: 2)
             .padding(.horizontal, 40)
             .padding(.vertical, 24)
             .background(
@@ -545,21 +554,56 @@ struct GameplayView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    /// The painted "GREAT SQUAT" / "GREAT AGEM" stamp, thrown up big in the
-    /// middle when a hold is ridden all the way out. Riding out a whole wave
-    /// or a whole freeze is the hardest thing the game asks for, so it gets
-    /// the loudest thing the game can say back.
+    /// The cue window, drawn the same way calibration draws its hold: a border
+    /// closing round the whole stage. One language for "time is running" on
+    /// this screen, in a colour that is never the calibration green so the two
+    /// are never mistaken for each other.
     @ViewBuilder
-    private var greatBanner: some View {
-        if let artwork = greatBannerArtwork {
+    private var cueTimerBorder: some View {
+        if let timer = cueTimer {
+            StageProgressBorder(progress: timer.progress, color: timer.color)
+                .padding(6)
+        }
+    }
+
+    private var cueTimer: (progress: Double, color: Color)? {
+        let run = viewModel.run
+        switch run.phase {
+        case .squatCue:
+            return (run.phaseProgress, Theme.Palette.cueOrange)
+        case .squatHold:
+            return (1 - run.phaseProgress, Theme.Palette.ochre)
+        case .freezeGrace:
+            return (run.phaseProgress, Theme.Palette.gameOverPink)
+        case .freezeHold:
+            return (1 - run.phaseProgress, Theme.Palette.indigoLight)
+        case .leyakWarning, .leyakDive:
+            return (run.phaseProgress, Theme.Palette.gameOverPink)
+        case .ngayog, .gameOver:
+            return nil
+        }
+    }
+
+    /// The painted verdict thrown up big in the middle after a move — praise
+    /// for a hold ridden all the way out, and the matching complaint for one
+    /// that was fluffed.
+    @ViewBuilder
+    private var actionBanner: some View {
+        if let artwork = actionBannerArtwork {
             GreatBanner(artworkName: artwork, stamp: viewModel.lastEventAt)
         }
     }
 
-    private var greatBannerArtwork: String? {
+    /// The painted verdict for whatever the player just did — the loudest
+    /// thing the game can say, so it is reserved for the moves that were
+    /// actually asked for rather than for every tick of the loop.
+    private var actionBannerArtwork: String? {
         switch viewModel.lastEvent {
         case .squatHeldFully: "great-squat"
         case .freezeHeldFully: "great-agem"
+        case .squatBrokenEarly: "bad-squat-hold-fail"
+        case .squatMissed: "too-slow-squat-fail"
+        case .freezeBrokenEarly: "so-close"
         default: nil
         }
     }
@@ -592,21 +636,19 @@ struct GameplayView: View {
         }
     }
 
+    /// Only the moments with no painted banner of their own land here — the
+    /// rest are announced by `actionBanner`, and saying it twice at two sizes
+    /// reads as a bug rather than as emphasis.
     private func flashText(for event: RunEvent) -> (label: String, color: Color)? {
         switch event {
         case .squatHit: (strings[.flashNice], Theme.Palette.poseCorrect)
-        case .squatMissed: (strings[.flashMissed], Theme.Palette.poseWrong)
-        // squatHeldFully and freezeHeldFully get the big painted stamp
-        // instead, so they are deliberately absent here rather than flashing
-        // "PERFECT!" underneath their own banner.
-        case .squatBrokenEarly: (strings[.flashBroke], Theme.Palette.cream)
         case .freezeLocked: (strings[.flashLocked], Theme.Palette.poseCorrect)
-        case .freezeBrokenEarly: (strings[.flashBroke], Theme.Palette.cream)
         case .freezeFailed: (strings[.flashTooSlow], Theme.Palette.poseWrong)
         case .leyakDodged: (strings[.flashDodged], Theme.Palette.poseCorrect)
         case .leyakHit: (strings[.flashCaught], Theme.Palette.poseWrong)
         case .ngayogCycle, .coinSpawned, .coinCollected, .squatCued, .freezeCued,
-             .leyakCued, .squatHeldFully, .freezeHeldFully, .energyLow, .gameOver: nil
+             .leyakCued, .squatMissed, .squatBrokenEarly, .squatHeldFully,
+             .freezeBrokenEarly, .freezeHeldFully, .energyLow, .gameOver: nil
         }
     }
 

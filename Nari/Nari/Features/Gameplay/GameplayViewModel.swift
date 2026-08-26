@@ -3,6 +3,7 @@ import CoreGraphics
 import Foundation
 import Observation
 import OSLog
+import Photos
 
 /// Runs a play session end to end: the placement tutorial, the calibration hold,
 /// the countdown, and then the scored loop.
@@ -203,9 +204,24 @@ final class GameplayViewModel {
             source.setFieldOfView(settings.settings.cameraFieldOfView)
         } catch BodyPoseSourceError.permissionDenied {
             phase = .unavailable(.permissionDenied)
+            return
         } catch {
             phase = .unavailable(.noCamera)
+            return
         }
+
+        // Asked for here, one screen after the camera, rather than on the
+        // game over screen where Download lives. By then the player is metres
+        // away from an iPad showing a system alert; here they are still
+        // holding it. Declining costs them nothing until they try to save.
+        await requestPhotoLibraryAccess()
+    }
+
+    /// Add-only, because saving a clip is the only thing the game ever does
+    /// with the library — it never reads anything back.
+    private func requestPhotoLibraryAccess() async {
+        guard PHPhotoLibrary.authorizationStatus(for: .addOnly) == .notDetermined else { return }
+        _ = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
     }
 
     func startSession() async {
@@ -338,6 +354,10 @@ final class GameplayViewModel {
         if left <= 0 {
             phase = .playing
             bodyLostSeconds = 0
+            // Everything captured up to here — calibration, the green room —
+            // is cut off the saved clip. Consent had to be asked for long
+            // before this moment; the video does not have to start there too.
+            recorder.markContentStart()
         } else {
             phase = .starting(remaining: left)
         }

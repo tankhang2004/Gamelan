@@ -106,8 +106,10 @@ struct TutorialView: View {
 
                     startingIndicator(metrics)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
-                .padding(.top, metrics.topPadding)
+                // Centred rather than pinned to the top: the stack is shorter
+                // than the stage on every device, and hanging it from the top
+                // left it sitting high with all the slack underneath.
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
             }
 
             VStack {
@@ -171,7 +173,6 @@ struct TutorialView: View {
 /// nothing by furniture that stayed full size.
 struct TutorialMetrics {
     let spacing: CGFloat
-    let topPadding: CGFloat
     let videoMaxWidth: CGFloat
     let videoMaxHeight: CGFloat
     let videoCorner: CGFloat
@@ -190,7 +191,6 @@ struct TutorialMetrics {
         let scale = (height / 834).clamped(to: 0.42...1)
 
         spacing = 18 * scale
-        topPadding = 50 * scale
         videoMaxWidth = min(1000, max(size.width - 48, 1))
         // The video takes what is left once the rest has had its share, so it
         // is the part that gives way on a short screen — never the button.

@@ -35,7 +35,11 @@ struct LeyakView: View {
                 // centre, so "the face is at the top edge" is true at progress
                 // 0 however tall the artwork is drawn.
                 .position(x: x, y: faceY - height * (Self.faceAnchor - 0.5))
-                .shadow(color: Theme.Palette.ink.opacity(0.5), radius: 30)
+                // Flattened to a single layer before it moves. A blurred
+                // shadow under a 1514x2147 image, recomputed every frame of
+                // the dive, is what made the fall look like it was stuttering
+                // rather than descending.
+                .drawingGroup()
         }
         .allowsHitTesting(false)
         .transition(.opacity)
