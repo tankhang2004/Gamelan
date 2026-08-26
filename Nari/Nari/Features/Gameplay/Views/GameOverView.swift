@@ -3,7 +3,13 @@ import Photos
 import SwiftUI
 
 /// The end of a run: score on the left, a playback of the run on the right,
-/// and the ways to replay, share, or save it. Kept neutral on purpose — this
+/// and the ways to replay, share, or save it.
+///
+/// Plain taps, not `HandHoverButton`s. Hand control is for a player standing
+/// several metres back mid-dance; here they walk *up* to the iPad to hit
+/// Download, and on the way their wrists sweep across the buttons. Play Again
+/// would fire from the approach itself, throwing away the run and the
+/// recording they came over to save. Kept neutral on purpose — this
 /// is a session summary, not a win or lose screen.
 struct GameOverView: View {
     let score: Int
@@ -89,7 +95,7 @@ struct GameOverView: View {
     // MARK: - Close
 
     private func closeButton(_ metrics: GameOverMetrics) -> some View {
-        HandHoverButton(action: onMenu) {
+        Button(action: onMenu) {
             Image(systemName: "xmark")
                 .font(.system(size: metrics.closeDiameter * 0.38, weight: .bold))
                 .foregroundStyle(Theme.Palette.ink)
@@ -245,17 +251,17 @@ struct GameOverView: View {
     private func actionButtons(_ metrics: GameOverMetrics) -> some View {
         // Play Again is the one thing most players came to this screen for,
         // so it is the one pill that is not the same orange as its neighbours.
-        HandHoverButton(action: onRetry) {
+        Button(action: onRetry) {
             actionLabel(strings[.gameOverRetry], symbol: "arrow.counterclockwise", metrics)
         }
         .buttonStyle(pillStyle(metrics, fill: Theme.Palette.indigo))
 
-        HandHoverButton(action: { isSharePresented = true }) {
+        Button(action: { isSharePresented = true }) {
             actionLabel(strings[.gameOverShare], symbol: "square.and.arrow.up", metrics)
         }
         .buttonStyle(pillStyle(metrics))
 
-        HandHoverButton(action: saveRecording) {
+        Button(action: saveRecording) {
             actionLabel(strings[.gameOverDownload], symbol: "arrow.down.to.line", metrics)
         }
         .buttonStyle(pillStyle(metrics))
@@ -430,7 +436,8 @@ struct GameOverMetrics {
 
 /// A plain `UIActivityViewController` wrapper, standing in for `ShareLink`
 /// here because `ShareLink` has no way to be opened programmatically — and a
-/// `HandHoverButton` needs to open it from a completed hover, not only a tap.
+/// The share sheet is opened from a plain tap, so it needs presenting rather
+/// than a `ShareLink`.
 private struct ActivityShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 

@@ -68,7 +68,7 @@ struct RunRules: Sendable {
     /// Without this a player already standing in something close to the agem
     /// locks the instant the cue appears, and the hold is counting down before
     /// they have read what was asked for. The cue needs a beat to be a cue.
-    var freezeReadSeconds: Double = 2
+    var freezeReadSeconds: Double = 4
     /// Time the pose has to be held once it locks in. A range for the same
     /// reason as `squatHoldDuration`.
     var freezeHoldDuration: ClosedRange<Double> = 5...5
@@ -87,7 +87,10 @@ struct RunRules: Sendable {
     /// banner. Flat rather than dripped per second because the banner
     /// states one number, and a payout that varied with the meter would
     /// make that number a lie most of the time.
-    var freezeHoldEnergy: Double = 15
+    /// Nothing: holding the agem keeps the meter where it is rather than
+    /// topping it up. Taksu is spent on the moves that go wrong, and earned
+    /// back by marching — an agem pays in points.
+    var freezeHoldEnergy: Double = 0
     var freezeHoldScore: Int = 100
 
     // MARK: - Leyak (the dodge)
@@ -110,8 +113,10 @@ struct RunRules: Sendable {
     /// standing under it at the moment it appears still has time to move.
     var leyakStrikeStart: Double = 0.42
     /// Paid for getting out of the way.
+    /// Points only. Surviving the Leyak is its own reward on the meter —
+    /// the alternative was the run ending.
     var leyakDodgedScore: Int = 40
-    var leyakDodgedEnergy: Double = 5
+    var leyakDodgedEnergy: Double = 0
     /// Chance the shared interrupt timer picks the Leyak.
     ///
     /// Rolled ahead of Freeze off the same number, and never touched by the

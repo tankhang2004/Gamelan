@@ -215,8 +215,11 @@ struct GameplayView: View {
                         .animation(Theme.Motion.cueDrop, value: cueCardIdentity)
                 }
 
+                // Hard against the top of the stage: the instruction is the
+                // one thing on this screen the player has to read while
+                // moving, and every point it sits down the picture is a point
+                // further from where their eyes already are.
                 VStack {
-                    Spacer().frame(height: proxy.size.height * 0.14)
                     prompt(width: min(CuePromptView.designWidth, proxy.size.width - sideInset * 2))
                     Spacer(minLength: 0)
                 }
@@ -225,13 +228,15 @@ struct GameplayView: View {
                     Spacer(minLength: 0)
                     HStack {
                         Spacer(minLength: 0)
+                        // Wearing the menu's own round button, so the one
+                        // control on the stage looks like the controls
+                        // everywhere else in the game.
                         HandHoverButton(action: { viewModel.pause() }) {
                             Image(systemName: "pause.fill")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(Theme.Palette.cream)
+                                .font(.system(size: 88 * 0.6, weight: .semibold))
+                                .foregroundStyle(.white)
                                 .frame(width: 88, height: 88)
-                                .background(Circle().fill(Theme.Palette.indigo))
-                                .overlay(Circle().strokeBorder(Theme.Palette.ink, lineWidth: 5))
+                                .background(Circle().fill(Theme.Palette.cueOrange))
                         }
                         .buttonStyle(.plain)
                     }
@@ -285,21 +290,18 @@ struct GameplayView: View {
     private var cueCard: some View {
         if let pose = viewModel.cuedPose {
             PoseCueCard(
-                title: pose.name(for: strings.language),
                 artworkName: pose.artworkName,
                 symbolName: "figure.stand"
             )
             .transition(.move(edge: .trailing).combined(with: .opacity))
         } else if viewModel.isSquatCued {
             PoseCueCard(
-                title: strings[.cueNgeed],
                 artworkName: "PoseNgeed",
                 symbolName: "figure.cooldown"
             )
             .transition(.move(edge: .trailing).combined(with: .opacity))
         } else if viewModel.showsMarchCard {
             PoseCueCard(
-                title: strings[.cueNgayog],
                 artworkName: "PoseNgayog",
                 symbolName: "figure.walk"
             )
@@ -312,9 +314,7 @@ struct GameplayView: View {
     private var fieldOfViewControl: some View {
         VStack(spacing: 10) {
             Text(strings[.cameraFieldHint])
-                .font(Theme.Fonts.body(24))
-                .foregroundStyle(Theme.Palette.cream.opacity(0.9))
-                .shadow(color: Theme.Palette.ink, radius: 0, x: 2, y: 2)
+                .stageCaption(size: 24, blockOpacity: 0.55)
 
             HStack(spacing: 0) {
                 ForEach(CameraFieldOfView.allCases) { option in
@@ -603,7 +603,7 @@ struct GameplayView: View {
         case .freezeHeldFully: "great-agem"
         case .squatBrokenEarly: "bad-squat-hold-fail"
         case .squatMissed: "too-slow-squat-fail"
-        case .freezeBrokenEarly: "so-close"
+        case .freezeFailed: "so-close"
         default: nil
         }
     }
@@ -643,12 +643,11 @@ struct GameplayView: View {
         switch event {
         case .squatHit: (strings[.flashNice], Theme.Palette.poseCorrect)
         case .freezeLocked: (strings[.flashLocked], Theme.Palette.poseCorrect)
-        case .freezeFailed: (strings[.flashTooSlow], Theme.Palette.poseWrong)
-        case .leyakDodged: (strings[.flashDodged], Theme.Palette.poseCorrect)
         case .leyakHit: (strings[.flashCaught], Theme.Palette.poseWrong)
         case .ngayogCycle, .coinSpawned, .coinCollected, .squatCued, .freezeCued,
-             .leyakCued, .squatMissed, .squatBrokenEarly, .squatHeldFully,
-             .freezeBrokenEarly, .freezeHeldFully, .energyLow, .gameOver: nil
+             .leyakCued, .leyakDodged, .squatMissed, .squatBrokenEarly,
+             .squatHeldFully, .freezeBrokenEarly, .freezeHeldFully,
+             .freezeFailed, .energyLow, .gameOver: nil
         }
     }
 

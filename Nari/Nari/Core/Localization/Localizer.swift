@@ -34,12 +34,12 @@ struct Localizer: Equatable, Sendable {
         .greenRoomArtist: "oleh Mekar Bhuana",
 
         .cueWalk: "NGAYOG",
-        .cueSquat: "NGE'ED!",
-        .cueFreeze: "DIAM!",
-        .cueHold: "TAHAN",
+        .cueSquat: "NGE'ED! Turun dan tahan",
+        .cueFreeze: "AGEM! Pasang pose dengan benar lalu tahan",
+        .cueHold: "TAHAN!",
         .cueNgayog: "Ngayog",
         .cueNgeed: "Nge'ed",
-        .cueLeyak: "MINGGIR!",
+        .cueLeyak: "AWAS LEYAK! Kena sekali, tamat",
         .cueCollectHint: "Petik bunga jepun untuk poin tambahan",
 
         .flashNice: "MANTAP!",
@@ -147,12 +147,12 @@ struct Localizer: Equatable, Sendable {
         .greenRoomArtist: "by Mekar Bhuana",
 
         .cueWalk: "WALK",
-        .cueSquat: "SQUAT!",
-        .cueFreeze: "FREEZE!",
-        .cueHold: "HOLD",
+        .cueSquat: "NGE'ED! Get down and hold it",
+        .cueFreeze: "AGEM! Do the pose correctly and hold it",
+        .cueHold: "HOLD!",
         .cueNgayog: "Ngayog",
         .cueNgeed: "Nge'ed",
-        .cueLeyak: "MOVE!",
+        .cueLeyak: "BEWARE THE LEYAK! One touch ends the run",
         .cueCollectHint: "Catch the frangipanis for extra points",
 
         .flashNice: "NICE!",

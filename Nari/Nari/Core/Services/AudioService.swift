@@ -49,6 +49,11 @@ protocol AudioServicing: AnyObject {
     func play(_ effect: SoundEffect)
     func startBackgroundMusic(_ track: BackgroundTrack)
     func stopBackgroundMusic()
+    /// Holds the current track where it is. Used for the agem, where the
+    /// music dropping out is itself the cue to freeze — so it has to come
+    /// back mid-phrase afterwards rather than restarting the piece.
+    func pauseBackgroundMusic()
+    func resumeBackgroundMusic()
 }
 
 /// Placeholder implementation that only remembers the levels. Swap for an
@@ -62,6 +67,8 @@ final class SilentAudioService: AudioServicing {
     func play(_ effect: SoundEffect) {}
     func startBackgroundMusic(_ track: BackgroundTrack) {}
     func stopBackgroundMusic() {}
+    func pauseBackgroundMusic() {}
+    func resumeBackgroundMusic() {}
 }
 
 /// Plays the bundled BGM loops and one-shot SFX from `Resources/Audio`.
@@ -79,7 +86,7 @@ final class NariAudioService: NSObject, AudioServicing {
         .squatCue: "squat-cue-appears",
         .squatHit: "squat-mix",
         .squatHeld: "squat-completed-leak",
-        .freezeCue: "agem-cue-triggers",
+        .freezeCue: "dong",
         .freezeLocked: "success-slowed",
         .freezeHeld: "success-tring",
         .leyakCue: "leak-appear",
@@ -133,6 +140,15 @@ final class NariAudioService: NSObject, AudioServicing {
         bgmPlayer?.stop()
         bgmPlayer = nil
         currentTrack = nil
+    }
+
+    func pauseBackgroundMusic() {
+        bgmPlayer?.pause()
+    }
+
+    func resumeBackgroundMusic() {
+        guard let bgmPlayer, !bgmPlayer.isPlaying else { return }
+        bgmPlayer.play()
     }
 
     /// SFX are `.wav`, BGM is `.mp3` — try both rather than hard-coding which

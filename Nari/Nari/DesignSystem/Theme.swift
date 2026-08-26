@@ -79,30 +79,36 @@ enum Theme {
 
     // MARK: - Type
 
-    /// Display type is Henny Penny and button type is Instrument Serif, matching
-    /// the Figma. Neither ships with iOS, so each style falls back to the nearest
-    /// system design when the font file is not in the bundle — see the README for
-    /// how to drop the real files in.
+    /// Two faces, and only two.
+    ///
+    /// Henny Penny is the game's voice and is reserved for titles — it is a
+    /// display face and stops being readable the moment it is asked to carry a
+    /// sentence. Everything else is SF Pro Rounded, which keeps the soft,
+    /// hand-drawn feel at any size, and the hierarchy is carried by weight
+    /// rather than by introducing a third family.
     enum Fonts {
         private static let display = "HennyPenny-Regular"
-        private static let serif = "InstrumentSerif-Regular"
 
+        /// Screen and section titles. Falls back to a heavy serif if the
+        /// bundled face is missing — see the README for dropping it in.
         static func title(_ size: CGFloat) -> Font {
-            custom(display, size: size) ?? .system(size: size, weight: .heavy, design: .serif)
+            custom(display, size: size) ?? .system(size: size, weight: .heavy, design: .rounded)
         }
 
+        /// Buttons, list rows, anything naming a thing.
         static func label(_ size: CGFloat) -> Font {
-            custom(serif, size: size) ?? .system(size: size, weight: .semibold, design: .serif)
+            .system(size: size, weight: .semibold, design: .rounded)
         }
 
+        /// Running prose.
         static func body(_ size: CGFloat) -> Font {
-            custom(serif, size: size) ?? .system(size: size, weight: .regular, design: .serif)
+            .system(size: size, weight: .regular, design: .rounded)
         }
 
         /// Numbers on the HUD. Monospaced digits so a rising score does not make
         /// the swatch under it jitter.
         static func readout(_ size: CGFloat) -> Font {
-            .system(size: size, weight: .bold, design: .serif).monospacedDigit()
+            .system(size: size, weight: .heavy, design: .rounded).monospacedDigit()
         }
 
         private static func custom(_ name: String, size: CGFloat) -> Font? {

@@ -412,11 +412,23 @@ final class GameplayViewModel {
         case .squatMissed: audio.play(.squatMiss)
         case .squatBrokenEarly: audio.play(.squatBroken)
         case .squatHeldFully: audio.play(.squatHeld)
-        case .freezeCued: audio.play(.freezeCue)
+        case .freezeCued:
+            // The gamelan cutting out is the cue as much as the words are —
+            // one gong into the silence, then the piece picks up where it
+            // left off once the agem is done with, either way.
+            audio.pauseBackgroundMusic()
+            audio.play(.freezeCue)
         case .freezeLocked: audio.play(.freezeLocked)
-        case .freezeHeldFully: audio.play(.freezeHeld)
-        case .freezeBrokenEarly: audio.play(.freezeBroken)
-        case .freezeFailed: audio.play(.freezeFailed)
+        // However the agem ends, the gamelan comes back.
+        case .freezeHeldFully:
+            audio.resumeBackgroundMusic()
+            audio.play(.freezeHeld)
+        case .freezeBrokenEarly:
+            audio.resumeBackgroundMusic()
+            audio.play(.freezeBroken)
+        case .freezeFailed:
+            audio.resumeBackgroundMusic()
+            audio.play(.freezeFailed)
         case .leyakCued: audio.play(.leyakCue)
         case .leyakDodged: audio.play(.squatHeld)
         case .leyakHit: audio.play(.freezeFailed)

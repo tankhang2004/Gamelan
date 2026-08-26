@@ -25,48 +25,31 @@ struct PaintSwatchReadout: View {
 /// The card on the right showing which move is being asked for, with the pose
 /// silhouette above its name. Printed on torn paper like the Taksu meter.
 struct PoseCueCard: View {
-    let title: String
     let artworkName: String?
     let symbolName: String
-    /// How much of the painted backing is left. Solid by default: a card the
-    /// player can see the room through is a card they cannot read the pose
-    /// off, and the pose is the whole reason it is on screen.
-    var backingOpacity: Double = 1
 
     var body: some View {
-        VStack(spacing: 10) {
-            Spacer(minLength: 0)
-
-            Group {
-                if let artworkName, UIImage(named: artworkName) != nil {
-                    Image(artworkName)
-                        .resizable()
-                        .scaledToFit()
-                } else {
-                    Image(systemName: symbolName)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(20)
-                }
+        Group {
+            if let artworkName, UIImage(named: artworkName) != nil {
+                Image(artworkName)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(systemName: symbolName)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(24)
+                    .foregroundStyle(Theme.Palette.ink)
             }
-            .foregroundStyle(Theme.Palette.ink)
-
-            Text(title)
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .foregroundStyle(Theme.Palette.ink)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 26)
-        .padding(.vertical, 30)
+        // One padding for every pose, so the drawings all sit the same size
+        // inside the same banner rather than each finding its own scale.
+        .padding(22)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             Image("banner-yellow")
                 .resizable()
                 .scaledToFill()
-                .opacity(backingOpacity)
         )
     }
 }
@@ -88,7 +71,7 @@ struct CuePromptView: View {
     var maxWidth: CGFloat = CuePromptView.designWidth
 
     /// The bar plus the swatch's own margins, which is what this was drawn as.
-    static let designWidth: CGFloat = 400
+    static let designWidth: CGFloat = 620
     private static let margin: CGFloat = 40
 
     /// Room left for the word and the bar under it.
@@ -102,13 +85,13 @@ struct CuePromptView: View {
         // shows its hold, so there is one language for "time is running" on
         // this screen rather than two.
         Text(text)
-            .tracking(3)
-            // A cue is one word and reads as one: a long one in a narrow stage
-            // shrinks rather than wrapping, and shrinks rather than pushing the
-            // swatch out past the room it was given.
-            .lineLimit(1)
+            // A cue names its move and then says what to do with it, so it is
+            // a short sentence rather than a single word — two lines at most,
+            // shrinking rather than pushing the block out past its slot.
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
             .minimumScaleFactor(0.5)
-            .stageCaption(size: 46, blockOpacity: 0.55)
+            .stageCaption(size: 38, blockOpacity: 0.6)
             .frame(maxWidth: contentWidth)
     }
 }
@@ -118,7 +101,7 @@ struct CuePromptView: View {
         PaintSwatchReadout(text: "1342")
         PaintSwatchReadout(text: "01:45")
         CuePromptView(text: "SQUAT!")
-        PoseCueCard(title: "Agem Kanan", artworkName: nil, symbolName: "figure.stand")
+        PoseCueCard(artworkName: nil, symbolName: "figure.stand")
             .frame(width: 220, height: 320)
     }
     .padding(40)

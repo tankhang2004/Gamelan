@@ -5,7 +5,7 @@ import SwiftUI
 struct StageProgressBorder: View {
     let progress: Double
     let color: Color
-    var lineWidth: CGFloat = 10
+    var lineWidth: CGFloat = 18
     var cornerRadius: CGFloat = 28
 
     var body: some View {
