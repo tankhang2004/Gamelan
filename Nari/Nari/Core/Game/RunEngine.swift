@@ -100,7 +100,7 @@ final class RunEngine {
         guard claimed > budget else { return }
 
         Logger.run.warning(
-            "Leyak \(self.rules.leyakChance, privacy: .public) + Freeze up to \(self.rules.maximumFreezeChance, privacy: .public) claims \(claimed, privacy: .public) of the interrupt roll, past the \(budget, privacy: .public) left by minimumSquatChance. Freeze will be capped short of its maximum so Nge'ed keeps its share."
+            "Leyak \(self.rules.leyakChance, privacy: .public) + Freeze up to \(self.rules.maximumFreezeChance, privacy: .public) claims \(claimed, privacy: .public) of the interrupt roll, past the \(budget, privacy: .public) left by minimumSquatChance. Freeze will be capped short of its maximum so Squat keeps its share."
         )
     }
 

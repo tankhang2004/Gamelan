@@ -86,7 +86,7 @@ final class NariAudioService: NSObject, AudioServicing {
         .squatCue: "squat-cue-appears",
         .squatHit: "squat-mix",
         .squatHeld: "squat-completed-leak",
-        .freezeCue: "dong",
+        .freezeCue: "ding",
         .freezeLocked: "success-slowed",
         .freezeHeld: "success-tring",
         .leyakCue: "leak-appear",

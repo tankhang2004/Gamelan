@@ -38,19 +38,19 @@ struct PoseCueCard: View {
                 Image(systemName: symbolName)
                     .resizable()
                     .scaledToFit()
-                    .padding(24)
+                    .padding(12)
                     .foregroundStyle(Theme.Palette.ink)
             }
         }
         // One padding for every pose, so the drawings all sit the same size
         // inside the same banner rather than each finding its own scale.
-        .padding(22)
+        .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            Image("banner-yellow")
-                .resizable()
-                .scaledToFill()
-        )
+//        .background(
+//            Image("banner-yellow")
+//                .resizable()
+//                .scaledToFill()
+//        )
     }
 }
 
