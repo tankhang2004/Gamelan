@@ -66,6 +66,15 @@ struct PoseCueCard: View {
 /// to fit.
 struct CuePromptView: View {
     let text: String
+    /// Which of the five hand-painted splashes this instruction sits on —
+    /// one colour per move, so the banner itself says what kind of cue this
+    /// is before the player has even read the word.
+    let backgroundAsset: String
+    /// 0...1 fill for the hold countdown under the instruction. Nil hides the
+    /// bar entirely — it only ever appears while a squat or an agem is being
+    /// held, counting the same window the border round the stage is already
+    /// draining, so the two never disagree about how much time is left.
+    var holdProgress: Double? = nil
     /// The widest the swatch may print. Left at the width it was drawn for,
     /// so anywhere with room to spare looks exactly as it always has.
     var maxWidth: CGFloat = CuePromptView.designWidth
@@ -80,19 +89,52 @@ struct CuePromptView: View {
     }
 
     var body: some View {
-        // No draining bar under the word any more: the cue window is shown by
-        // the border closing round the whole stage, the same way calibration
-        // shows its hold, so there is one language for "time is running" on
-        // this screen rather than two.
-        Text(text)
+        VStack(spacing: 12) {
             // A cue names its move and then says what to do with it, so it is
             // a short sentence rather than a single word — two lines at most,
-            // shrinking rather than pushing the block out past its slot.
-            .multilineTextAlignment(.center)
-            .lineLimit(2)
-            .minimumScaleFactor(0.5)
-            .stageCaption(size: 38, blockOpacity: 0.6)
-            .frame(maxWidth: contentWidth)
+            // shrinking rather than pushing the block out past its slot. Sized
+            // to be read from across the room, not off a phone held in hand.
+            Text(text)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.5)
+                .commandBannerText(size: 50)
+
+            if let holdProgress {
+                HoldCountdownBar(progress: holdProgress)
+                    .frame(height: 16)
+            }
+        }
+        .padding(.horizontal, 30)
+        .padding(.vertical, 18)
+        .frame(maxWidth: contentWidth)
+        .background(
+            Image(backgroundAsset)
+                .resizable()
+                .scaledToFill()
+        )
+        .shadow(color: Theme.Palette.ink.opacity(0.28), radius: 0, x: 2, y: 4)
+    }
+}
+
+/// The countdown for an actual hold: black creeping across a white track as
+/// the pose is held, filling exactly as the ring round the stage drains —
+/// two readings of the same number, one for a glance up close and one for
+/// across the room.
+struct HoldCountdownBar: View {
+    /// 0 the instant the hold locks in, 1 once it has been held in full.
+    let progress: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white)
+                Capsule()
+                    .fill(Theme.Palette.ink)
+                    .frame(width: proxy.size.width * CGFloat(progress).clamped(to: 0...1))
+            }
+        }
+        .overlay(Capsule().strokeBorder(Theme.Palette.ink, lineWidth: 2))
     }
 }
 
@@ -100,7 +142,8 @@ struct CuePromptView: View {
     VStack(spacing: 30) {
         PaintSwatchReadout(text: "1342")
         PaintSwatchReadout(text: "01:45")
-        CuePromptView(text: "SQUAT!")
+        CuePromptView(text: "SQUAT!", backgroundAsset: "command-orange-squat-hold")
+        CuePromptView(text: "HOLD IT!", backgroundAsset: "command-orange-squat-hold", holdProgress: 0.6)
         PoseCueCard(artworkName: nil, symbolName: "figure.stand")
             .frame(width: 220, height: 320)
     }

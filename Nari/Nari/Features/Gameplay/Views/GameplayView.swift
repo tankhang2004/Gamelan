@@ -247,16 +247,6 @@ struct GameplayView: View {
         }
     }
 
-    /// How big the reference card is drawn on this stage.
-    ///
-    /// Landscape gives it a slice of the width and most of the height, which
-    /// is what it was designed against. Portrait cannot use the same fractions:
-    /// a fifth of an iPhone's width is about seventy points, and the card's own
-    /// side padding eats nearly all of that before a dancer is drawn in it — the
-    /// card was still on screen, just squeezed to a sliver. So portrait sizes it
-    /// against the width it actually has, holds it to a card-shaped block rather
-    /// than a full-height strip, and caps it so an iPad in portrait does not hand
-    /// a third of the room to the reference.
     private func cueCardSize(in size: CGSize) -> (width: CGFloat, height: CGFloat) {
         guard size.height > size.width else {
             return (size.width * 0.19, size.height * 0.68)
@@ -354,33 +344,43 @@ struct GameplayView: View {
         }
     }
 
+    /// Seconds the march instruction gets before the banner hands off to the
+    /// flower-collecting hint — long enough to read, short enough that the
+    /// resting state of the game is "go pick flowers", not "walk forever".
+    private static let marchInstructionSeconds: Double = 2
+
     private func prompt(width: CGFloat) -> some View {
         let run = viewModel.run
         return Group {
             switch run.phase {
             case .ngayog:
-                VStack(spacing: 10) {
-                    CuePromptView(text: strings[.cueWalk], maxWidth: width)
-                    // The march scores nothing on its own, so without this the
-                    // resting state of the game reads as "do this for points"
-                    // when the points are actually lying on the floor.
-                    Text(strings[.cueCollectHint])
-                        .multilineTextAlignment(.center)
-                        .stageCaption(size: 20, blockOpacity: 0.5)
-                        .frame(maxWidth: width)
+                if run.ngayogPhaseElapsed < Self.marchInstructionSeconds {
+                    CuePromptView(text: strings[.cueWalk], backgroundAsset: "command-purple-walk", maxWidth: width)
+                } else {
+                    CuePromptView(text: strings[.cueCollectHint], backgroundAsset: "command-yellow-flower", maxWidth: width)
                 }
             case .squatCue:
-                CuePromptView(text: strings[.cueSquat], maxWidth: width)
+                CuePromptView(text: strings[.cueSquat], backgroundAsset: "command-orange-squat-hold", maxWidth: width)
             case .squatHold:
-                CuePromptView(text: strings[.cueHold], maxWidth: width)
+                CuePromptView(
+                    text: strings[.cueHold],
+                    backgroundAsset: "command-orange-squat-hold",
+                    holdProgress: run.phaseProgress,
+                    maxWidth: width
+                )
             case .freezeGrace:
-                CuePromptView(text: strings[.cueFreeze], maxWidth: width)
+                CuePromptView(text: strings[.cueFreeze], backgroundAsset: "command-hit-pose-freeze", maxWidth: width)
             case .freezeHold:
-                CuePromptView(text: strings[.cueHold], maxWidth: width)
+                CuePromptView(
+                    text: strings[.cueHold],
+                    backgroundAsset: "command-hit-pose-freeze",
+                    holdProgress: run.phaseProgress,
+                    maxWidth: width
+                )
             // The warning carries the same instruction as the dive, and is the
             // half of it the player can still act on.
             case .leyakWarning, .leyakDive:
-                CuePromptView(text: strings[.cueLeyak], maxWidth: width)
+                CuePromptView(text: strings[.cueLeyak], backgroundAsset: "command-red-leyak", maxWidth: width)
             case .gameOver:
                 EmptyView()
             }
@@ -558,6 +558,11 @@ struct GameplayView: View {
     /// closing round the whole stage. One language for "time is running" on
     /// this screen, in a colour that is never the calibration green so the two
     /// are never mistaken for each other.
+    ///
+    /// Skipped for the two hold phases — `squatHold` and `freezeHold` already
+    /// count the same window with `HoldCountdownBar`, right under the
+    /// instruction the player is already looking at. Ringing the whole stage
+    /// too said the same thing twice in two different places.
     @ViewBuilder
     private var cueTimerBorder: some View {
         if let timer = cueTimer {
@@ -571,15 +576,11 @@ struct GameplayView: View {
         switch run.phase {
         case .squatCue:
             return (run.phaseProgress, Theme.Palette.cueOrange)
-        case .squatHold:
-            return (1 - run.phaseProgress, Theme.Palette.ochre)
         case .freezeGrace:
             return (run.phaseProgress, Theme.Palette.gameOverPink)
-        case .freezeHold:
-            return (1 - run.phaseProgress, Theme.Palette.indigoLight)
         case .leyakWarning, .leyakDive:
             return (run.phaseProgress, Theme.Palette.gameOverPink)
-        case .ngayog, .gameOver:
+        case .squatHold, .freezeHold, .ngayog, .gameOver:
             return nil
         }
     }
@@ -695,8 +696,14 @@ struct GameplayView: View {
 
                 HandHoverButton(action: { viewModel.resume() }) {
                     Label(strings[.playResume], systemImage: "play.fill")
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .tracking(32 * 0.05)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 80 * 0.65)
+                        .frame(height: 80)
+                        .background(Capsule().fill(Theme.Palette.indigo))
                 }
-                .buttonStyle(PaintedButtonStyle())
+                .buttonStyle(.plain)
             }
         }
     }
@@ -711,10 +718,9 @@ struct GameplayView: View {
                 Text(strings[.playExit])
                     .font(Theme.Fonts.label(12))
             }
-            .foregroundStyle(Theme.Palette.cream)
+            .foregroundStyle(.white)
             .frame(width: 72, height: 72)
-            .background(Circle().fill(Theme.Palette.ink.opacity(0.55)))
-            .overlay(Circle().strokeBorder(Theme.Palette.cream.opacity(0.6), lineWidth: 3))
+            .background(Circle().fill(Theme.Palette.cueOrange))
         }
         .buttonStyle(.plain)
     }

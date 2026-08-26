@@ -156,4 +156,33 @@ extension View {
                     .fill(Theme.Palette.ink.opacity(blockOpacity))
             )
     }
+
+    /// The command banners' instruction text: a solid fill ringed by a hard
+    /// outline built from stacked zero-blur shadows in eight directions.
+    ///
+    /// These banners sit on a painted splash asset rather than live camera,
+    /// so — unlike `stageCaption` — the letters can be dense and solid
+    /// instead of fighting a moving picture: a fill dark enough to read on
+    /// any of the five splash colours, wrapped in a light outline so it never
+    /// dissolves into whichever paint tone is directly behind it. Sized big
+    /// on purpose — this is the one line of text a player standing several
+    /// metres back has to be able to read at a glance.
+    func commandBannerText(
+        size: CGFloat,
+        fill: Color = Theme.Palette.ink,
+        outline: Color = .white
+    ) -> some View {
+        let offset = size * 0.045
+        return self
+            .font(.system(size: size, weight: .heavy, design: .rounded))
+            .foregroundStyle(fill)
+            .shadow(color: outline, radius: 0, x: offset, y: 0)
+            .shadow(color: outline, radius: 0, x: -offset, y: 0)
+            .shadow(color: outline, radius: 0, x: 0, y: offset)
+            .shadow(color: outline, radius: 0, x: 0, y: -offset)
+            .shadow(color: outline, radius: 0, x: offset * 0.7, y: offset * 0.7)
+            .shadow(color: outline, radius: 0, x: -offset * 0.7, y: offset * 0.7)
+            .shadow(color: outline, radius: 0, x: offset * 0.7, y: -offset * 0.7)
+            .shadow(color: outline, radius: 0, x: -offset * 0.7, y: -offset * 0.7)
+    }
 }

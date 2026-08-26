@@ -97,7 +97,7 @@ struct RunRules: Sendable {
     /// actually appears. The Leyak is aimed at wherever the player is standing
     /// when it is rolled, so without a telegraph the only way to learn the
     /// dodge is to be hit by it once.
-    var leyakWarningSeconds: Double = 1.2
+    var leyakWarningSeconds: Double = 3
     /// How long the Leyak takes to come down the room.
     ///
     /// Long enough to see it, read where it is falling, and walk out of the

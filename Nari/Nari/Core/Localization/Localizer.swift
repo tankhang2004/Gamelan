@@ -33,7 +33,7 @@ struct Localizer: Equatable, Sendable {
         .greenRoomTrack: "Ginanti",
         .greenRoomArtist: "oleh Mekar Bhuana",
 
-        .cueWalk: "NGAYOG",
+        .cueWalk: "JALAN DI TEMPAT!",
         .cueSquat: "JONGKOK! Turun dan tahan",
         .cueFreeze: "AGEM! Pasang pose dengan benar lalu tahan",
         .cueHold: "TAHAN!",
@@ -146,7 +146,7 @@ struct Localizer: Equatable, Sendable {
         .greenRoomTrack: "Ginanti",
         .greenRoomArtist: "by Mekar Bhuana",
 
-        .cueWalk: "WALK",
+        .cueWalk: "MARCH IN PLACE!",
         .cueSquat: "SQUAT! Get down and hold it",
         .cueFreeze: "AGEM! Do the pose correctly and hold it",
         .cueHold: "HOLD!",

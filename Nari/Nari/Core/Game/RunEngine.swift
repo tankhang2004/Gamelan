@@ -44,6 +44,10 @@ final class RunEngine {
     private(set) var score: Int = 0
     /// Seconds survived, which drives both the on-screen timer and the ramp.
     private(set) var elapsed: Double = 0
+    /// `elapsed` at the moment the run last entered `.ngayog`, so the view
+    /// layer can show the march instruction only for the first couple of
+    /// seconds back on the floor before handing the banner to the flower hint.
+    private(set) var ngayogEnteredAt: Double = 0
 
     /// 0–1, for whichever bar the current phase wants to draw: the squat window
     /// running out, the grace period running out, or the hold filling up.
@@ -58,6 +62,10 @@ final class RunEngine {
         case .ngayog, .gameOver: 0
         }
     }
+
+    /// Seconds since the run last dropped back into `.ngayog` — zero the
+    /// instant it does, climbing while the player is just marching.
+    var ngayogPhaseElapsed: Double { elapsed - ngayogEnteredAt }
 
     var energyFraction: Double { energy / rules.maximumEnergy }
     var isEnergyLow: Bool { energy < Self.lowEnergyThreshold }
@@ -351,6 +359,7 @@ final class RunEngine {
 
     private func returnToNgayog() {
         phase = .ngayog
+        ngayogEnteredAt = elapsed
         holdTotal = 0
         coinField.clear()
         scheduleNextInterrupt()

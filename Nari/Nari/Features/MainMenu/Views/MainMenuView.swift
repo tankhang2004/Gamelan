@@ -10,6 +10,7 @@ struct MainMenuView: View {
     let gameCenter: LeaderboardProviding
 
     @Environment(\.strings) private var strings
+    @Environment(\.audio) private var audio
 
     var body: some View {
         GeometryReader { proxy in
@@ -17,17 +18,6 @@ struct MainMenuView: View {
 
             ZStack {
                 PaintTexture()
-                // Held to the stage in every orientation. A `scaledToFill`
-                // image overflows the size it was offered, and an unclipped
-                // one hands that overflowed size back to the ZStack as the
-                // stack's own — which the `Spacer`-driven chrome then lays
-                // itself out against, putting its corners outside the screen.
-                //
-                // Which way it overflows depends on the shape of the window
-                // against this artwork's 1.43, so there is no orientation this
-                // is safe to skip: an iPhone in portrait runs about 850 points
-                // wide, an iPhone in landscape 200 points tall, an iPad in
-                // landscape a hundred wide.
                 Image("bg-yellow")
                             .resizable()
                             .scaledToFill()
@@ -52,7 +42,6 @@ struct MainMenuView: View {
                         popupLayer
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
-            .onTapGesture { viewModel.play() }
         }
         .ignoresSafeArea()
         .task { viewModel.onAppear() }
@@ -64,7 +53,7 @@ struct MainMenuView: View {
         VStack(spacing: 0) {
             HStack(alignment: .top) {
                 GameTitleView(layout: layout)
-                    .offset(x: viewModel.isContentVisible ? 20 : -70, y:viewModel.isContentVisible ? 60 : 50)
+                    .offset(x: viewModel.isContentVisible ? -20 : -50, y:viewModel.isContentVisible ? 60 : 50)
                     .animation(.spring(response: 0.6, dampingFraction: 0.82), value: viewModel.isContentVisible)
 
                 Spacer(minLength: 0)
@@ -76,13 +65,22 @@ struct MainMenuView: View {
 
             HStack {
                 Spacer(minLength: 0)
-                Text("Tap to Start")
-                    .font(.system(size: layout.scaled(46), weight: .bold, design: .rounded))
-                    .foregroundStyle(.indigo)
-                    .opacity(viewModel.isContentVisible ? 1 : 0)
-                    .offset(x: -50, y:0)
-                    .animation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.12), value: viewModel.isContentVisible)
-                    .modifier(BlinkingModifier())
+                Button(action: {
+                    audio.play(.buttonTap)
+                    viewModel.play()
+                }) {
+                    Text(strings[.menuPlay])
+                        .font(.system(size: layout.scaled(34), weight: .bold, design: .rounded))
+                        .tracking(layout.scaled(34) * 0.05)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, layout.scaled(72) * 0.65)
+                        .frame(height: layout.scaled(72))
+                        .background(Capsule().fill(Theme.Palette.indigo))
+                }
+                .buttonStyle(.plain)
+                .opacity(viewModel.isContentVisible ? 1 : 0)
+                .offset(x: -30, y: -40)
+                .animation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.12), value: viewModel.isContentVisible)
             }
         }
         .padding(.horizontal, layout.horizontalPadding)
@@ -139,16 +137,6 @@ struct MainMenuView: View {
     }
 }
 
-struct BlinkingModifier: ViewModifier {
-    @State private var isBlinking = false
-
-    func body(content: Content) -> some View {
-        content
-            .opacity(isBlinking ? 0.4 : 1)
-            .animation(.easeInOut(duration: 0.8).repeatForever(), value: isBlinking)
-            .onAppear { isBlinking = true }
-    }
-}
 
 #Preview {
     let services = AppServices.preview()

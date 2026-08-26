@@ -9,10 +9,12 @@ import Foundation
 /// the wide setting hands back the full sensor instead of asking the player to
 /// find a bigger room.
 enum CameraFieldOfView: String, Codable, CaseIterable, Identifiable, Sendable {
+    /// Cropped in to roughly what a normal front camera shows. The default —
+    /// declared first so it also sits on the left of the toggle, the spot a
+    /// player's eye lands on first.
+    case standard
     /// The whole sensor. Everything the front camera can see.
     case wide
-    /// Cropped in to roughly what a normal front camera shows.
-    case standard
 
     var id: String { rawValue }
 

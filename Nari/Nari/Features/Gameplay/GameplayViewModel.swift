@@ -37,7 +37,7 @@ final class GameplayViewModel {
     }
 
     /// How long the whole body has to stay in frame before the countdown starts.
-    static let calibrationSeconds: Double = 3
+    static let calibrationSeconds: Double = 1.5
     /// The green room countdown.
     static let countdownSeconds: Double = 3
     /// Losing the body for this long during play sends the player back to
