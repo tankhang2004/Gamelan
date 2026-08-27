@@ -28,6 +28,7 @@ struct RootView: View {
 
             case .gameplay:
                 gameplayScreen
+                    .keepsScreenAwake()
                     .transition(.opacity)
             }
         }
